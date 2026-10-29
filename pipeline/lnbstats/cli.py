@@ -23,7 +23,7 @@ from pathlib import Path
 from . import demo as demo_mod
 from .export import write_export
 from .ingest import ingest_records
-from .store import connect
+from .store import connect, write_dump
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "data"
@@ -37,6 +37,7 @@ def export_real(conn, a) -> None:
     """Sólo la base real alimenta la web; con --db alternativo no se toca real.json."""
     if Path(a.db).resolve() == REAL_DB.resolve():
         write_export(conn, WEB_DATA / "real.json", "real")
+        print(f"Volcado para git: {write_dump(conn, a.db)}")
     else:
         print(f"(base alternativa {a.db}: no se actualiza web/public/data/real.json; usá 'export --out')")
 
@@ -61,7 +62,10 @@ def cmd_import_csv(a):
 
 
 def cmd_sync(a):
+    from datetime import date
+    from .sources.laliganacional import season_code_for
     from .sync import run_sync
+    a.season = a.season or season_code_for(date.today())
     conn = connect(a.db)
     r = run_sync(conn, RAW_DIR, a.season, max_games=a.max_games, recheck_days=a.recheck_days,
                  standings=not a.no_standings)
@@ -70,7 +74,10 @@ def cmd_sync(a):
 
 
 def cmd_retry(a):
+    from datetime import date
+    from .sources.laliganacional import season_code_for
     from .sync import retry_failed
+    a.season = a.season or season_code_for(date.today())
     conn = connect(a.db)
     retry_failed(conn, RAW_DIR, a.season)
     export_real(conn, a)
@@ -134,12 +141,12 @@ def main(argv=None) -> int:
     s.add_argument("--no-export", action="store_true")
     s.set_defaults(fn=cmd_import_csv)
     s = sub.add_parser("sync")
-    s.add_argument("--season", required=True, help="código de temporada, p. ej. 2026-27")
+    s.add_argument("--season", default=None, help="código de temporada, p. ej. 2026-27 (por defecto, la actual)")
     s.add_argument("--max-games", type=int, default=80, help="máximo de fichas de partido a pedir por ejecución")
     s.add_argument("--no-standings", action="store_true", help="no actualizar la tabla de posiciones oficial")
     s.add_argument("--recheck-days", type=int, default=4)
     s.set_defaults(fn=cmd_sync)
-    s = sub.add_parser("retry-failed"); s.add_argument("--season", required=True); s.set_defaults(fn=cmd_retry)
+    s = sub.add_parser("retry-failed"); s.add_argument("--season", default=None); s.set_defaults(fn=cmd_retry)
     s = sub.add_parser("parse-file")
     s.add_argument("file"); s.add_argument("--url", required=True); s.add_argument("--season", required=True)
     s.add_argument("--date", required=True, help="fecha del partido AAAA-MM-DD (la ficha no la informa)")

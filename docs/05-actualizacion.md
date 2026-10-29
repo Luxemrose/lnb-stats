@@ -17,13 +17,29 @@ Costo típico: primera carga ≈ 75 pedidos (≈ 4 min); actualización diaria �
 
 `retry-failed` repite la sincronización: los partidos con error no quedaron guardados, así que se vuelven a pedir.
 
-## ¿Cómo automatizarlo?
+## Actualización automática (activa)
 
-| Opción | Costo | Complejidad | Comentario |
-|---|---|---|---|
-| **Manual** (correrlo después de cada fecha) | 0 | Ninguna | Recomendado para empezar: ves los errores en el momento. |
-| Programador de tu computadora (cron / Programador de tareas de Windows) | 0 | Baja | La computadora tiene que estar prendida. |
-| GitHub Actions programado | 0 en repos públicos; en privados hay 2.000 min/mes gratis (alcanza: cada corrida dura pocos minutos) | Media | El workflow hace commit de la base y del JSON. Ver `.github/workflows/sync.yml` (viene **desactivado**). Algunos sitios bloquean IPs de centros de datos: probalo a mano primero. |
-| Supabase + función programada | Plan gratuito con límites | Alta | Sólo vale la pena si necesitás varios usuarios editando o una API. No hace falta para el MVP. |
+`.github/workflows/sync.yml` corre **todos los días a las 07:17 (hora argentina)** en GitHub Actions:
 
-Antes de automatizar: revisá los términos de uso del sitio y mantené la frecuencia baja (una vez por día alcanza).
+1. Corre las pruebas del pipeline (si fallan, no toca los datos).
+2. Reconstruye la base desde `data/lnb.sql` y ejecuta `sync` para la temporada en curso.
+3. Si cambió algo, guarda `data/lnb.sql` y `web/public/data/real.json` en el repositorio.
+4. Si hubo cambios, vuelve a publicar la web (`deploy.yml`).
+
+Si el sitio rechaza el acceso o cambia de estructura, la ejecución falla y GitHub te avisa por correo.
+Se puede lanzar a mano desde la pestaña **Actions → Sincronizar datos LNB → Run workflow**.
+Costo: 0 (repositorio público).
+
+### Por qué la base se guarda como texto
+
+`data/lnb.sqlite` no se sube a git: se guarda un volcado SQL (`data/lnb.sql`), con un orden estable.
+Así cada actualización agrega sólo las líneas que cambiaron, en vez de una copia completa del archivo binario.
+Si `lnb.sqlite` no existe, el pipeline lo reconstruye solo a partir de `lnb.sql`.
+
+## Histórico: sólo desde esta temporada
+
+El sitio oficial sólo expone la competencia en curso (el fixture devuelve "No se encontraron partidos"
+para fechas de 2025; estadísticas, equipos y descargas tampoco tienen temporadas anteriores).
+**Cuando empiece la temporada 2027-28, los partidos de 2026-27 dejarán de ser accesibles por el fixture**:
+la base de LNB Stats es la que conserva la historia, y por eso importa la actualización diaria.
+Para temporadas pasadas, la vía es la importación CSV (`docs/04-importacion-csv.md`).

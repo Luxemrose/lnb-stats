@@ -15,7 +15,7 @@ pipeline/   Python: obtención, validación, almacenamiento y exportación de da
   lnbstats/   código (cli.py es el punto de entrada)
   tests/      pruebas (pytest)
   templates/  plantillas CSV
-data/       lnb.sqlite (base real) · demo.sqlite (ficticia, se regenera) · raw/ (HTML descargado)
+data/       lnb.sql (base real, en git) · lnb.sqlite (se reconstruye) · demo.sqlite · raw/ (respuestas del sitio)
 web/        React + TypeScript + Vite + Tailwind + Recharts
   public/data/real.json  ← lo que muestra la web (generado por el pipeline)
   public/data/demo.json  ← datos ficticios
@@ -93,10 +93,14 @@ Después de cualquiera de las dos, la web muestra los datos nuevos al recargar.
 | `demo` | Regenera los datos ficticios |
 | `status` | Últimas sincronizaciones y errores |
 
-## Publicar la web
+## Publicación y actualización automática
 
-`npm run build` genera `web/dist/`, un sitio estático que se puede subir a
-GitHub Pages, Netlify o Cloudflare Pages sin servidor ni claves.
+- **Web:** https://luxemrose.github.io/lnb-stats/ (GitHub Pages, se publica con `.github/workflows/deploy.yml`
+  en cada cambio de `web/`). Requisito único: *Settings → Pages → Source: GitHub Actions*.
+- **Datos:** `.github/workflows/sync.yml` sincroniza todos los días a las 07:17 (hora argentina) y republica la web.
+- La base se guarda en git como texto (`data/lnb.sql`); `data/lnb.sqlite` se reconstruye sola.
+
+Detalles en `docs/05-actualizacion.md`.
 
 ## Reglas de calidad
 

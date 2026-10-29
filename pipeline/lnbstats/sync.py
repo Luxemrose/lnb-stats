@@ -13,7 +13,7 @@ from pathlib import Path
 
 from .sources.laliganacional import (
     BASE, FixtureGame, LayoutChanged, PoliteFetcher, SourceBlocked, build_record, daterange_chunks, fixture_url,
-    parse_boxscore, parse_fixture, parse_standings, season_range,
+    parse_boxscore, parse_fixture, parse_standings, season_code_for, season_range,
 )
 from .store import finish_sync, log_error, resolve_errors, save_game, save_standings, start_sync
 from .validate import validate_game
@@ -110,7 +110,10 @@ def run_sync(conn, raw_dir: Path, season: str, max_games: int = 80, recheck_days
             _save(conn, rec, sync_id, counts, ref)
         if pages >= max_games:
             print(f"Se alcanzó el límite de {max_games} fichas por ejecución; el resto se procesa en la próxima.")
-        if standings:
+        # La portada sólo publica la tabla de la temporada en curso: para temporadas pasadas no se pide.
+        if standings and season != season_code_for(today):
+            print(f"  (tabla oficial no disponible para temporadas pasadas: se usa la calculada)")
+        elif standings:
             try:
                 sync_standings(conn, fetcher, season, sync_id)
             except SourceBlocked:

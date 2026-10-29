@@ -1,33 +1,51 @@
-# Sincronización programada con la web oficial.
-# DESACTIVADO: sólo corre a mano (workflow_dispatch). Para programarlo, descomentá "schedule"
-# después de verificar el parser con HTML real y de revisar los términos de uso del sitio.
+# Actualización diaria de datos desde laliganacional.com.ar.
+# Corre todos los días a las 07:17 (hora argentina), después de los partidos de la noche.
+# También se puede lanzar a mano: pestaña Actions -> "Sincronizar datos LNB" -> Run workflow.
 name: Sincronizar datos LNB
 on:
+  schedule:
+    - cron: "17 10 * * *"   # 10:17 UTC = 07:17 Argentina
   workflow_dispatch:
-    inputs:
-      season:
-        description: "Temporada (p. ej. 2026-27)"
-        required: true
-        default: "2026-27"
-  # schedule:
-  #   - cron: "17 10 * * *"   # todos los días 07:17 (hora argentina)
 permissions:
   contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: sync-datos
+  cancel-in-progress: false
 jobs:
   sync:
     runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -r pipeline/requirements.txt
-      - name: Sincronizar
+      - name: Pruebas del pipeline
         working-directory: pipeline
-        run: python -m lnbstats.cli sync --season "${{ github.event.inputs.season || '2026-27' }}"
-      - name: Guardar cambios
+        run: python -m pytest -q
+      - name: Sincronizar (temporada en curso)
+        working-directory: pipeline
+        env:
+          TZ: America/Argentina/Buenos_Aires
+        run: python -m lnbstats.cli sync
+      - name: Guardar cambios en el repositorio
+        id: commit
         run: |
           git config user.name "lnb-stats-bot"
           git config user.email "lnb-stats-bot@users.noreply.github.com"
-          git add data/lnb.sqlite web/public/data/real.json
-          git diff --cached --quiet || git commit -m "Datos: sincronización automática"
-          git push
+          git add data/lnb.sql web/public/data/real.json
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "Datos: sincronización automática $(TZ=America/Argentina/Buenos_Aires date +%Y-%m-%d)"
+            git pull --rebase origin main
+            git push origin HEAD:main
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+  publicar:
+    needs: sync
+    if: needs.sync.outputs.changed == 'true'
+    uses: ./.github/workflows/deploy.yml

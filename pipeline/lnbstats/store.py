@@ -24,9 +24,17 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
+def dump_path(path: str | Path) -> Path:
+    return Path(path).with_suffix(".sql")
+
+
 def connect(path: str | Path) -> sqlite3.Connection:
+    """Abre la base. Si no existe pero hay un volcado .sql (lo que se guarda en git), la reconstruye."""
     Path(path).parent.mkdir(parents=True, exist_ok=True)
+    rebuild = not Path(path).exists() and dump_path(path).exists()
     conn = sqlite3.connect(str(path))
+    if rebuild:
+        conn.executescript(dump_path(path).read_text(encoding="utf-8"))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
@@ -260,3 +268,10 @@ def save_standings(conn, season_code: str, phase: str, rows) -> int:
                      " captured_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                      (season_id, phase, r.position, tid, r.pj, r.pg, r.pp, r.pf, r.pc, r.pts, ts))
     return len(rows)
+
+
+def write_dump(conn, path: str | Path) -> Path:
+    """Volcado de texto de la base (orden estable): en git ocupa poco y los cambios se pueden revisar."""
+    out = dump_path(path)
+    out.write_text("\n".join(conn.iterdump()) + "\n", encoding="utf-8")
+    return out

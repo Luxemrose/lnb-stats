@@ -237,3 +237,16 @@ def test_url_token_change_is_not_a_content_change(conn):
     ingest_records(conn, [g1], "csv", "t", verbose=False)
     r = ingest_records(conn, [g2], "csv", "t", verbose=False)
     assert r["unchanged"] == 1
+
+
+def test_dump_roundtrip_rebuilds_database(tmp_path):
+    from lnbstats.store import write_dump
+    db = tmp_path / "lnb.sqlite"
+    c = connect(db)
+    ingest_records(c, [make_game()], "csv", "t", verbose=False)
+    write_dump(c, db)
+    c.close()
+    db.unlink()  # como en GitHub Actions: sólo existe el .sql
+    c2 = connect(db)
+    assert c2.execute("SELECT COUNT(*) FROM games").fetchone()[0] == 1
+    assert c2.execute("SELECT COUNT(*) FROM player_game_stats").fetchone()[0] == 2

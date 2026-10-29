@@ -15,3 +15,5 @@ lnb-stats.bundle
 # copia clonada del mismo repositorio
 lnb-stats/
 *.tsbuildinfo
+# la base binaria se reconstruye desde data/lnb.sql (que sí se guarda en git)
+data/lnb.sqlite
