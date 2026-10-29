@@ -12,3 +12,5 @@ data/demo.sqlite
 # respaldos generados localmente
 lnb-stats.zip
 lnb-stats.bundle
+# copia clonada del mismo repositorio
+lnb-stats/
