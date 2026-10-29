@@ -8,3 +8,7 @@ __pycache__/
 data/raw/
 # base de demostración: se regenera con `lnbstats.cli demo`
 data/demo.sqlite
+
+# respaldos generados localmente
+lnb-stats.zip
+lnb-stats.bundle
