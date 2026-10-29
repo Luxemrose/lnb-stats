@@ -1,0 +1,33 @@
+# Sincronización programada con la web oficial.
+# DESACTIVADO: sólo corre a mano (workflow_dispatch). Para programarlo, descomentá "schedule"
+# después de verificar el parser con HTML real y de revisar los términos de uso del sitio.
+name: Sincronizar datos LNB
+on:
+  workflow_dispatch:
+    inputs:
+      season:
+        description: "Temporada (p. ej. 2026-27)"
+        required: true
+        default: "2026-27"
+  # schedule:
+  #   - cron: "17 10 * * *"   # todos los días 07:17 (hora argentina)
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r pipeline/requirements.txt
+      - name: Sincronizar
+        working-directory: pipeline
+        run: python -m lnbstats.cli sync --season "${{ github.event.inputs.season || '2026-27' }}"
+      - name: Guardar cambios
+        run: |
+          git config user.name "lnb-stats-bot"
+          git config user.email "lnb-stats-bot@users.noreply.github.com"
+          git add data/lnb.sqlite web/public/data/real.json
+          git diff --cached --quiet || git commit -m "Datos: sincronización automática"
+          git push

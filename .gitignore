@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# HTML crudo descargado: se regenera, puede ser pesado y es contenido de terceros
+data/raw/
+# base de demostración: se regenera con `lnbstats.cli demo`
+data/demo.sqlite

@@ -1,0 +1,2 @@
+game_key,side,player,player_source_id,jersey,position,starter,min,pts,fg2m,fg2a,fg3m,fg3a,ftm,fta,oreb,dreb,reb,ast,stl,tov,blk,blka,pf,pfd,plus_minus,eff
+EJEMPLO-1,home,"Apellido, Nombre",,10,Base,si,32:15,18,5,9,2,6,2,2,0,4,4,6,1,2,0,0,2,3,8,19
