@@ -63,7 +63,8 @@ def cmd_import_csv(a):
 def cmd_sync(a):
     from .sync import run_sync
     conn = connect(a.db)
-    r = run_sync(conn, RAW_DIR, a.season, max_games=a.max_games, recheck_days=a.recheck_days)
+    r = run_sync(conn, RAW_DIR, a.season, max_games=a.max_games, recheck_days=a.recheck_days,
+                 standings=not a.no_standings)
     export_real(conn, a)
     return 0 if r["status"] in ("success", "partial") else 1
 
@@ -78,7 +79,7 @@ def cmd_retry(a):
 def cmd_parse_file(a):
     from .sources.laliganacional import parse_game_page
     html = Path(a.file).read_text(encoding="utf-8")
-    rec = parse_game_page(html, a.url, a.season)
+    rec = parse_game_page(html, a.url, a.season, game_date=a.date)
     print(f"{rec.date} {rec.home_team.name} {rec.home_score} - {rec.away_score} {rec.away_team.name}"
           f" | estado={rec.status} | detalle={rec.detail_level} | jugadores={len(rec.players)}")
     for n in rec.notes:
@@ -134,12 +135,14 @@ def main(argv=None) -> int:
     s.set_defaults(fn=cmd_import_csv)
     s = sub.add_parser("sync")
     s.add_argument("--season", required=True, help="código de temporada, p. ej. 2026-27")
-    s.add_argument("--max-games", type=int, default=60)
+    s.add_argument("--max-games", type=int, default=80, help="máximo de fichas de partido a pedir por ejecución")
+    s.add_argument("--no-standings", action="store_true", help="no actualizar la tabla de posiciones oficial")
     s.add_argument("--recheck-days", type=int, default=4)
     s.set_defaults(fn=cmd_sync)
     s = sub.add_parser("retry-failed"); s.add_argument("--season", required=True); s.set_defaults(fn=cmd_retry)
     s = sub.add_parser("parse-file")
     s.add_argument("file"); s.add_argument("--url", required=True); s.add_argument("--season", required=True)
+    s.add_argument("--date", required=True, help="fecha del partido AAAA-MM-DD (la ficha no la informa)")
     s.add_argument("--save", action="store_true", help="validar y guardar en la base real")
     s.set_defaults(fn=cmd_parse_file)
     s = sub.add_parser("inspect"); s.add_argument("target"); s.set_defaults(fn=cmd_inspect)

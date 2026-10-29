@@ -247,3 +247,16 @@ def finish_sync(conn, sync_id: int, counts: dict, message: str = "", failed: boo
          counts.get("rejected", 0), message, sync_id))
     conn.commit()
     return status
+
+
+def save_standings(conn, season_code: str, phase: str, rows) -> int:
+    """Reemplaza la foto de la tabla oficial (temporada + fase). `rows`: StandingRow."""
+    season_id = get_or_create_season(conn, season_code)
+    ts = now_iso()
+    conn.execute("DELETE FROM official_standings WHERE season_id=? AND phase=?", (season_id, phase))
+    for r in rows:
+        tid = get_or_create_team(conn, r.team, r.club_id)
+        conn.execute("INSERT INTO official_standings(season_id, phase, position, team_id, pj, pg, pp, pf, pc, pts,"
+                     " captured_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                     (season_id, phase, r.position, tid, r.pj, r.pg, r.pp, r.pf, r.pc, r.pts, ts))
+    return len(rows)

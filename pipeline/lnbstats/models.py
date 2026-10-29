@@ -112,5 +112,8 @@ class GameRecord:
         """Representación determinística (para hash de cambios e historial)."""
         d = asdict(self)
         d.pop("notes", None)
+        # El token de la URL oficial cambia en cada visita: no es un cambio de contenido.
+        d.pop("source_ref", None)
+        d.pop("source_url", None)
         d["players"] = sorted(d["players"], key=lambda p: (p["side"], normalize_name(p["name"])))
         return d

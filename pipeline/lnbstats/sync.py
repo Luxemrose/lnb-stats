@@ -1,87 +1,140 @@
-"""Sincronización incremental con la web oficial."""
+"""Sincronización incremental con la web oficial.
+
+1. Fixture de la temporada (en tramos de 31 días) -> lista de partidos con equipos, fecha y resultado.
+2. Partidos sin resultado -> se guardan como programados (sin pedir la ficha).
+3. Partidos con resultado -> se pide la ficha sólo si es nuevo, si le falta la planilla
+   o si es reciente (la Liga puede corregir planillas unos días después).
+4. Tabla de posiciones oficial.
+"""
 from __future__ import annotations
 
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from .sources.laliganacional import (FIXTURE_URL, PoliteFetcher, SourceBlocked, discover_game_urls, parse_game_page)
-from .store import finish_sync, game_needs_refresh, log_error, resolve_errors, save_game, start_sync
+from .sources.laliganacional import (
+    BASE, FixtureGame, LayoutChanged, PoliteFetcher, SourceBlocked, build_record, daterange_chunks, fixture_url,
+    parse_boxscore, parse_fixture, parse_standings, season_range,
+)
+from .store import finish_sync, log_error, resolve_errors, save_game, save_standings, start_sync
 from .validate import validate_game
 
+STANDINGS_PHASES_URL = f"{BASE}/api/clasificacion/{{fase}}/grupos"
 
-def _process_url(conn, fetcher, sync_id, url, season, counts):
-    try:
-        html = fetcher.get(url)
-    except SourceBlocked:
-        raise
-    except Exception as e:  # noqa: BLE001
-        log_error(conn, sync_id, "fetch", url, f"{type(e).__name__}: {e}")
-        counts["rejected"] += 1
-        return
-    try:
-        rec = parse_game_page(html, url, season)
-    except Exception as e:  # noqa: BLE001
-        log_error(conn, sync_id, "parse", url, f"{type(e).__name__}: {e}")
-        counts["rejected"] += 1
-        return
+
+def _needs_page(conn, natural_key: str, recheck_days: int, today: date) -> bool:
+    row = conn.execute("SELECT status, detail_level, date FROM games WHERE natural_key=?", (natural_key,)).fetchone()
+    if row is None or row["status"] != "final" or row["detail_level"] != "box_score":
+        return True
+    return (today - date.fromisoformat(row["date"])).days <= recheck_days
+
+
+def _save(conn, rec, sync_id, counts, ref) -> None:
     res = validate_game(rec)
     if not res.ok:
-        log_error(conn, sync_id, "validate", url, " | ".join(res.errors))
+        log_error(conn, sync_id, "validate", ref, " | ".join(res.errors))
         counts["rejected"] += 1
+        print(f"  RECHAZADO {rec.date} {rec.home_team.name}-{rec.away_team.name}: {' | '.join(res.errors)}")
         return
     with conn:
         counts[save_game(conn, rec, sync_id)] += 1
-        resolve_errors(conn, url)
-    print(f"  ok {rec.date} {rec.home_team.name} {rec.home_score}-{rec.away_score} {rec.away_team.name}"
-          f" [{rec.detail_level}] {'; '.join(rec.notes)}")
+        resolve_errors(conn, ref)
 
 
-def run_sync(conn, raw_dir: Path, season: str, max_games: int = 60, recheck_days: int = 4,
-             urls: list[str] | None = None) -> dict:
-    """Descubre partidos en el fixture y procesa solo los nuevos o recientes.
+def sync_standings(conn, fetcher: PoliteFetcher, season: str, sync_id: int) -> None:
+    """Tabla oficial: la portada indica las fases (select-fase); cada fase tiene grupos (API JSON)."""
+    import json
+    import re
+    home = fetcher.get(f"{BASE}/laliga/", save_as="portada")
+    m = re.search(r'id="select-fase".*?</select>', home, flags=re.S)
+    fases = re.findall(r'<option value="(\d+)"[^>]*>([^<]+)</option>', m.group(0)) if m else []
+    if not fases:
+        log_error(conn, sync_id, "parse", "posiciones", "no se encontraron fases en la portada")
+        return
+    for fase_id, fase_name in fases:
+        grupos = json.loads(fetcher.get(STANDINGS_PHASES_URL.format(fase=fase_id), save_as=f"grupos_{fase_id}"))
+        for g in grupos:
+            html = fetcher.get(f"{BASE}/laliga?handler=Clasificacion&faseId={fase_id}&grupoId={g['idGrupo']}",
+                               save_as=f"posiciones_{fase_id}_{g['idGrupo']}")
+            rows = parse_standings(html)
+            phase = fase_name.strip() if len(grupos) == 1 else f"{fase_name.strip()} · {g['nombre']}"
+            with conn:
+                save_standings(conn, season, phase, rows)
+            print(f"  posiciones oficiales: {phase} ({len(rows)} equipos)")
 
-    `max_games` limita los pedidos por ejecución para no sobrecargar el sitio.
-    """
+
+def run_sync(conn, raw_dir: Path, season: str, max_games: int = 80, recheck_days: int = 4,
+             today: date | None = None, standings: bool = True) -> dict:
+    today = today or datetime.now(timezone.utc).astimezone().date()
     sync_id = start_sync(conn, "laliganacional", f"temporada {season}")
     counts = {"new": 0, "updated": 0, "unchanged": 0, "rejected": 0, "skipped": 0}
     fetcher = PoliteFetcher(raw_dir)
+    start, end = season_range(season)
+    end = min(end, today + timedelta(days=14))  # próximos 14 días como "programados"
     try:
-        if urls is None:
+        fixture: list[FixtureGame] = []
+        for a, b in daterange_chunks(start, end):
+            fixture += parse_fixture(fetcher.get(fixture_url(a, b), save_as=f"fixture_{a}_{b}"))
+        print(f"Fixture {season}: {len(fixture)} partidos entre {start} y {end}")
+        if not fixture:
+            log_error(conn, sync_id, "parse", "fixture", "el fixture no devolvió partidos")
+
+        pages = 0
+        for fx in fixture:
+            rec = build_record(fx, None, season, today)
+            ref = fx.url or rec.natural_key()
+            if fx.home_score is None or not fx.url:
+                _save(conn, rec, sync_id, counts, ref)
+                continue
+            if not _needs_page(conn, rec.natural_key(), recheck_days, today):
+                counts["skipped"] += 1
+                continue
+            if pages >= max_games:
+                counts["skipped"] += 1
+                continue
+            pages += 1
             try:
-                discovered = discover_game_urls(fetcher.get(FIXTURE_URL))
+                box = parse_boxscore(fetcher.get(fx.url, save_as=f"partido_{fx.date}_{fx.home.club_id}_{fx.away.club_id}"))
+                rec = build_record(fx, box if box.players else None, season, today)
+                if not box.players:
+                    rec.notes.append("la ficha no tiene planilla individual")
+            except SourceBlocked:
+                raise
+            except (LayoutChanged, ValueError, KeyError) as e:
+                log_error(conn, sync_id, "parse", ref, f"{type(e).__name__}: {e}")
+                counts["rejected"] += 1
+                continue
+            except Exception as e:  # noqa: BLE001 — red u otros: queda registrado para reintentar
+                log_error(conn, sync_id, "fetch", ref, f"{type(e).__name__}: {e}")
+                counts["rejected"] += 1
+                continue
+            _save(conn, rec, sync_id, counts, ref)
+        if pages >= max_games:
+            print(f"Se alcanzó el límite de {max_games} fichas por ejecución; el resto se procesa en la próxima.")
+        if standings:
+            try:
+                sync_standings(conn, fetcher, season, sync_id)
             except SourceBlocked:
                 raise
             except Exception as e:  # noqa: BLE001
-                log_error(conn, sync_id, "fetch", FIXTURE_URL, f"{type(e).__name__}: {e}")
-                finish_sync(conn, sync_id, counts, "no se pudo leer el fixture", failed=True)
-                return {"sync_id": sync_id, "status": "failed", **counts}
-            if not discovered:
-                log_error(conn, sync_id, "parse", FIXTURE_URL,
-                          "el fixture no contiene enlaces /laliga/partido/...; puede cargarse con JavaScript")
-                finish_sync(conn, sync_id, counts, "sin partidos descubiertos", failed=True)
-                return {"sync_id": sync_id, "status": "failed", **counts}
-            urls = []
-            for token, url in discovered:
-                if game_needs_refresh(conn, token, recheck_days):
-                    urls.append(url)
-                else:
-                    counts["skipped"] += 1
-        print(f"Partidos a procesar: {len(urls[:max_games])} (omitidos por estar al día: {counts['skipped']})")
-        for url in urls[:max_games]:
-            _process_url(conn, fetcher, sync_id, url, season, counts)
+                log_error(conn, sync_id, "parse", "posiciones", f"{type(e).__name__}: {e}")
     except SourceBlocked as e:
         log_error(conn, sync_id, "fetch", "sitio", str(e))
         status = finish_sync(conn, sync_id, counts, f"detenido: {e}", failed=True)
         print(f"Sincronización detenida: {e}")
         return {"sync_id": sync_id, "status": status, **counts}
-    msg = f"omitidos al día: {counts['skipped']}"
+    except Exception as e:  # noqa: BLE001 — p. ej. el fixture cambió de estructura
+        log_error(conn, sync_id, "fetch", "fixture", f"{type(e).__name__}: {e}")
+        status = finish_sync(conn, sync_id, counts, f"fallo: {e}", failed=True)
+        print(f"Sincronización fallida: {e}")
+        return {"sync_id": sync_id, "status": status, **counts}
+    msg = f"{fetcher.requests} pedidos al sitio; omitidos (al día o por límite): {counts['skipped']}"
     status = finish_sync(conn, sync_id, counts, msg)
-    print(f"Resultado ({status}): {counts}")
+    print(f"Resultado ({status}): {counts} · {msg}")
     return {"sync_id": sync_id, "status": status, **counts}
 
 
 def retry_failed(conn, raw_dir: Path, season: str) -> dict:
-    rows = conn.execute("SELECT DISTINCT ref FROM sync_errors WHERE resolved_at IS NULL AND ref LIKE 'http%'"
-                        " AND ref LIKE '%/partido/%'").fetchall()
-    urls = [r["ref"] for r in rows]
-    print(f"Reintentando {len(urls)} partidos con errores pendientes")
-    return run_sync(conn, raw_dir, season, max_games=len(urls) or 1, urls=urls)
+    """Los partidos con error se vuelven a pedir en una sincronización normal: no figuran como guardados."""
+    n = conn.execute("SELECT COUNT(*) c FROM sync_errors WHERE resolved_at IS NULL").fetchone()["c"]
+    print(f"Errores pendientes: {n}. Se reintentan con una sincronización incremental.")
+    return run_sync(conn, raw_dir, season)

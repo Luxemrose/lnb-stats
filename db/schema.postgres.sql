@@ -139,3 +139,15 @@ CREATE TABLE IF NOT EXISTS sync_errors (
   retry_count   INTEGER NOT NULL DEFAULT 0,
   resolved_at   TEXT
 );
+
+-- Tabla de posiciones OFICIAL publicada por la fuente (última foto por temporada y fase).
+CREATE TABLE IF NOT EXISTS official_standings (
+  season_id     BIGINT NOT NULL REFERENCES seasons(id),
+  phase         TEXT NOT NULL,
+  position      INTEGER NOT NULL,
+  team_id       BIGINT NOT NULL REFERENCES teams(id),
+  pj INTEGER NOT NULL, pg INTEGER NOT NULL, pp INTEGER NOT NULL,
+  pf INTEGER NOT NULL, pc INTEGER NOT NULL, pts INTEGER NOT NULL,
+  captured_at   TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (season_id, phase, team_id)
+);

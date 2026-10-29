@@ -45,6 +45,9 @@ def build_export(conn, mode: str) -> dict:
                                    f" did_not_play AS dnp, {stat_cols} FROM player_game_stats"),
         "teamStats": _rows(conn, f"SELECT game_id AS gameId, team_id AS teamId, is_home AS isHome, {stat_cols}"
                                  f" FROM team_game_stats"),
+        "officialStandings": _rows(conn, "SELECT season_id AS seasonId, phase, position, team_id AS teamId, pj, pg, pp,"
+                                         " pf, pc, pts, captured_at AS capturedAt FROM official_standings"
+                                         " ORDER BY season_id, phase, position"),
         "syncLogs": _rows(conn, "SELECT * FROM data_sync_logs ORDER BY id DESC LIMIT 30"),
         "openErrors": _rows(conn, "SELECT id, stage, ref, message, created_at AS createdAt, retry_count AS retryCount"
                                   " FROM sync_errors WHERE resolved_at IS NULL ORDER BY id DESC LIMIT 100"),

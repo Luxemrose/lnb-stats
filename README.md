@@ -3,11 +3,10 @@
 Plataforma de análisis estadístico de la Liga Nacional de Básquet (Argentina),
 pensada para producir contenido para el canal **Quinteto Inicial**.
 
-> **Estado (29/10/2026):** la aplicación y el pipeline funcionan y tienen pruebas.
-> **Todavía no hay datos reales cargados**: el entorno donde se construyó no tenía
-> acceso a `laliganacional.com.ar`, así que el lector de la web oficial está
-> escrito pero **sin calibrar con el HTML real**. Ver `docs/01-diagnostico-fuente.md`.
-> Mientras tanto podés ver la interfaz en **modo demo** (datos ficticios, siempre señalizados).
+> **Estado (29/10/2026):** con **datos reales** de la temporada 2026-27, tomados de
+> `laliganacional.com.ar` y verificados: 44 partidos con planilla completa, 25 programados,
+> 237 jugadores. La tabla oficial de posiciones coincide con la calculada. Ver `docs/01-diagnostico-fuente.md`.
+> El modo demo (datos ficticios, siempre señalizados) sigue disponible para probar la interfaz.
 
 ## Estructura
 
@@ -49,36 +48,25 @@ En Windows reemplazá `.venv/bin/python` por `.venv\Scripts\python`.
 
 ## Cargar datos reales
 
-### Opción A: sincronizar con la web oficial
-
-Desde una computadora con acceso al sitio, primero **verificá** que el lector entienda las páginas:
+### Opción A: sincronizar con la web oficial (recomendada)
 
 ```bash
 cd pipeline
-.venv/bin/python -m lnbstats.cli inspect https://www.laliganacional.com.ar/laliga/fixture
-```
-
-Tiene que listar muchos enlaces con el patrón `/laliga/partido/{token}/...`. Después, sobre una ficha de partido:
-
-```bash
-.venv/bin/python -m lnbstats.cli inspect "https://www.laliganacional.com.ar/laliga/partido/TOKEN/local-vs-visitante"
-```
-
-En la salida, las tablas de jugadores deben figurar con `box_score=True` y un `mapeo` sin demasiados `None`.
-Si está bien, sincronizá:
-
-```bash
 .venv/bin/python -m lnbstats.cli sync --season 2026-27
 ```
+
+La primera vez descarga todas las planillas de la temporada (unos 3 minutos); después sólo los partidos nuevos
+y los de los últimos 4 días (unos 15 pedidos). Para ver el resultado y los errores:
 
 ```bash
 .venv/bin/python -m lnbstats.cli status
 ```
 
-Si algo falla, el HTML descargado queda en `data/raw/` y podés reprocesarlo sin volver a pedirlo:
+Todas las respuestas del sitio quedan guardadas en `data/raw/`. Si cambia la estructura del sitio, la
+sincronización lo informa (`LayoutChanged`) en lugar de guardar datos dudosos; con `inspect` se puede revisar:
 
 ```bash
-.venv/bin/python -m lnbstats.cli parse-file data/raw/AAAAMMDD/archivo.html --url "URL-ORIGINAL" --season 2026-27
+.venv/bin/python -m lnbstats.cli inspect data/raw/AAAAMMDD/archivo.html
 ```
 
 ### Opción B: importar CSV
@@ -96,11 +84,11 @@ Después de cualquiera de las dos, la web muestra los datos nuevos al recargar.
 | Comando | Qué hace |
 |---|---|
 | `init-db` | Crea la base real vacía |
-| `sync --season 2026-27` | Sincronización incremental con la web oficial |
+| `sync --season 2026-27` | Sincronización incremental: fixture, planillas y tabla oficial |
 | `retry-failed --season 2026-27` | Reintenta los partidos con errores |
 | `import-csv partidos.csv [estadisticas.csv]` | Importa desde CSV |
 | `inspect URL\|archivo` | Muestra la estructura de una página (para calibrar) |
-| `parse-file archivo --url URL --season X [--save]` | Procesa un HTML guardado |
+| `parse-file archivo --url URL --season X --date AAAA-MM-DD [--save]` | Procesa la ficha de un partido guardada |
 | `export` | Regenera `web/public/data/real.json` |
 | `demo` | Regenera los datos ficticios |
 | `status` | Últimas sincronizaciones y errores |

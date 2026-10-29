@@ -3,17 +3,19 @@
 ## Qué hace `sync`
 
 1. Lee `robots.txt` y se detiene si no permite el acceso.
-2. Descarga `/laliga/fixture` y extrae los enlaces a fichas de partido.
-3. **Incremental:** omite los partidos ya guardados como finalizados con planilla y con más de 4 días de antigüedad.
-4. Procesa como máximo 60 fichas por ejecución, con 3 s de pausa entre pedidos.
-5. Cada ficha: descarga → guarda el HTML crudo en `data/raw/AAAAMMDD/` → parsea → valida → guarda.
-6. Si el partido ya existía y cambió algo, guarda una **revisión nueva** (la anterior queda en `game_revisions`).
-7. Registra la ejecución en `data_sync_logs` y cada error en `sync_errors`.
-8. Ante 403 o 429 **se detiene** (no reintenta ni intenta esquivar bloqueos).
-9. Regenera `web/public/data/real.json`.
+2. Pide el fixture de la temporada en tramos de 31 días (desde el 1 de agosto hasta 14 días después de hoy).
+3. Partidos sin resultado (el sitio los muestra 0-0): se guardan como programados, sin pedir la ficha.
+4. Partidos con resultado: pide la ficha **sólo** si es nuevo, si le falta la planilla o si se jugó en los
+   últimos 4 días (por si la Liga corrige la planilla). Máximo 80 fichas por ejecución, 3 s entre pedidos.
+5. Valida y guarda. Si un partido ya guardado cambió, crea una revisión nueva y conserva la anterior
+   (el token de la URL no cuenta como cambio: el sitio lo regenera en cada visita).
+6. Actualiza la tabla de posiciones oficial.
+7. Registra todo en `data_sync_logs` / `sync_errors` y regenera `web/public/data/real.json`.
+8. Ante 403 o 429 se detiene. Si la página cambió de estructura, registra el error y no guarda datos dudosos.
 
-`retry-failed` vuelve a procesar sólo las fichas con errores pendientes.
-Un error se marca como resuelto cuando ese partido se guarda bien.
+Costo típico: primera carga ≈ 75 pedidos (≈ 4 min); actualización diaria ≈ 15 pedidos (< 1 min).
+
+`retry-failed` repite la sincronización: los partidos con error no quedaron guardados, así que se vuelven a pedir.
 
 ## ¿Cómo automatizarlo?
 

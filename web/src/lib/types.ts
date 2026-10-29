@@ -30,6 +30,10 @@ export interface SyncLog {
   status: "running" | "success" | "partial" | "failed"; games_new: number; games_updated: number;
   games_unchanged: number; games_rejected: number; message: string | null;
 }
+export interface OfficialStanding {
+  seasonId: number; phase: string; position: number; teamId: number;
+  pj: number; pg: number; pp: number; pf: number; pc: number; pts: number; capturedAt: string;
+}
 export interface OpenError { id: number; stage: string; ref: string | null; message: string; createdAt: string; retryCount: number }
 
 export interface Dataset {
@@ -39,4 +43,5 @@ export interface Dataset {
   };
   seasons: Season[]; teams: Team[]; players: Player[]; rosters: Roster[]; games: Game[];
   playerStats: PlayerGameRow[]; teamStats: TeamGameRow[]; syncLogs: SyncLog[]; openErrors: OpenError[];
+  officialStandings?: OfficialStanding[];
 }

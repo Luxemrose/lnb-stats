@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Card, DataTable, Notice, Origin, PageHeader, PlayerLink, StatTile, TeamLink } from "../components/ui";
+import { StandingsCard } from "../components/Standings";
+import { Card, Notice, PageHeader, PlayerLink, StatTile } from "../components/ui";
 import { useSeason } from "../lib/data";
 import { playerSummaries } from "../lib/derive";
-import { COUNT_LABELS, f0, f1, fdate, fdatetime, pct, signed } from "../lib/format";
-import { isCompleted, leaderMinGames, standings, type CountKey, type TeamRecord } from "../lib/stats";
+import { COUNT_LABELS, f1, fdate, fdatetime } from "../lib/format";
+import { isCompleted, leaderMinGames, standings, type CountKey } from "../lib/stats";
 
 const LEADER_KEYS: CountKey[] = ["pts", "reb", "ast", "stl", "blk", "eff"];
 
@@ -44,10 +45,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-5">
-        <Card className="xl:col-span-3" title={<span className="flex items-center gap-2">Tabla de posiciones <Origin kind="calculado" /></span>}
-          subtitle="Calculada con los resultados almacenados. Orden: % de victorias y diferencia de puntos; no aplica los desempates oficiales.">
-          <StandingsTable rows={data.table} team={team} />
-        </Card>
+        <StandingsCard sd={sd} className="xl:col-span-3" />
         <Card className="xl:col-span-2" title="Últimos resultados" actions={<Link className="btn text-xs" to="/partidos">Todos los partidos</Link>}>
           <ul className="divide-y divide-line">
             {data.done.slice(0, 8).map((g) => {
@@ -102,23 +100,5 @@ export default function Dashboard() {
         <Link to="/contenido" className="card p-4 hover:bg-surface-2"><div className="font-semibold">Vista Quinteto Inicial</div><div className="text-sm text-ink-2">Indicadores y gráficos listos para guion y video.</div></Link>
       </div>
     </div>
-  );
-}
-
-export function StandingsTable({ rows, team }: { rows: TeamRecord[]; team: (id: number) => { name: string } }) {
-  return (
-    <DataTable rows={rows.map((r, i) => ({ ...r, pos: i + 1 }))} rowKey={(r) => r.teamId} dense csvName="tabla-posiciones-calculada.csv"
-      columns={[
-        { key: "pos", label: "#", value: (r) => r.pos },
-        { key: "team", label: "Equipo", align: "left", value: (r) => team(r.teamId).name, render: (r) => <TeamLink id={r.teamId} name={team(r.teamId).name} /> },
-        { key: "pj", label: "PJ", title: "Partidos jugados", value: (r) => r.games },
-        { key: "g", label: "G", title: "Ganados", value: (r) => r.wins },
-        { key: "p", label: "P", title: "Perdidos", value: (r) => r.losses },
-        { key: "pct", label: "%V", title: "Porcentaje de victorias", value: (r) => r.winPct, render: (r) => pct(r.winPct) },
-        { key: "pf", label: "PF", title: "Puntos a favor", value: (r) => r.pf, render: (r) => f0(r.pf) },
-        { key: "pc", label: "PC", title: "Puntos en contra", value: (r) => r.pa, render: (r) => f0(r.pa) },
-        { key: "dif", label: "DIF", title: "Diferencia de puntos", value: (r) => r.diff, render: (r) => signed(r.diff, 0) },
-        { key: "racha", label: "Racha", value: (r) => r.streak },
-      ]} />
   );
 }

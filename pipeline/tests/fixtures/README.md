@@ -1,4 +1,9 @@
-Los archivos de esta carpeta son **sintéticos**: se escribieron a mano para probar
-el parser y la importación. No son copias de páginas oficiales ni contienen
-estadísticas reales. Cuando haya acceso a la web oficial, agregar aquí un HTML
-real guardado con `lnbstats.cli inspect` para fijar el comportamiento del parser.
+Extractos de páginas reales de https://www.laliganacional.com.ar (descargadas el 29/10/2026),
+recortados a lo mínimo necesario para fijar el comportamiento del parser:
+
+- `real_fixture_excerpt.html`: 3 filas de `/laliga/fixture?handler=ProximosPartidos`.
+- `real_game_excerpt.html`: las dos planillas de LANÚS 74 - 92 GIMNASIA (CR) (28/09/2026).
+- `real_standings_excerpt.html`: 3 filas de la tabla de posiciones.
+
+Si el sitio cambia de estructura, estas pruebas siguen pasando (son una foto);
+el aviso llega por `LayoutChanged` durante la sincronización.

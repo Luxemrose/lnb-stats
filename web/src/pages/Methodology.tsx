@@ -27,6 +27,10 @@ export default function Methodology() {
           <li><b>Validación antes de guardar.</b> Se rechaza un partido si: la suma de puntos de los jugadores no coincide con el resultado; los puntos no cumplen 2×T2 + 3×T3 + TL; convertidos &gt; intentados; RO + RD ≠ rebotes totales; hay jugadores duplicados; o hay empate en un partido finalizado.</li>
           <li><b>Sin duplicados.</b> Cada partido se identifica por temporada + fecha + local + visitante. Reimportarlo no lo duplica.</li>
           <li><b>Historial.</b> Si la fuente corrige un partido, se guarda una nueva revisión y se conserva la anterior.</li>
+          <li><b>Estado de los partidos.</b> El sitio no marca "finalizado": un partido con resultado de un día anterior se considera finalizado; los del día quedan "sin confirmar" hasta la próxima actualización. Los partidos que el fixture muestra 0-0 se toman como no jugados.</li>
+          <li><b>Partido disputado.</b> Los jugadores que figuran en la planilla con 0:00 minutos se marcan "no jugó" y no suman partidos.</li>
+          <li><b>Tabla oficial.</b> Se muestra la tabla publicada por la Liga y se verifica automáticamente contra los partidos almacenados.</li>
+          <li><b>Posición.</b> La fuente oficial no publica la posición de los jugadores, por eso no figura.</li>
           <li><b>Distinto nivel de detalle.</b> Hay partidos con planilla completa y otros sólo con resultado; cada pantalla lo indica.</li>
           <li><b>Datos de demostración.</b> El modo demo usa equipos y jugadores ficticios ("Demo …") en un archivo separado y se marca con una franja permanente.</li>
         </ul>

@@ -9,7 +9,8 @@ from lnbstats.headers import parse_minutes, parse_pair, parse_int, map_header
 from lnbstats.ingest import ingest_records
 from lnbstats.models import GameRecord, PlayerLine, TeamRef, normalize_name
 from lnbstats.sources.csv_import import CsvImportError, load_csv
-from lnbstats.sources.laliganacional import discover_game_urls, parse_game_page
+from lnbstats.sources.laliganacional import (build_record, parse_boxscore, parse_fixture, parse_game_page,
+                                            parse_standings, pretty_name, season_code_for)
 from lnbstats.store import connect
 from lnbstats.validate import validate_game
 
@@ -152,30 +153,71 @@ def test_csv_unknown_game_key(tmp_path):
         load_csv(tmp_path / "g.csv", tmp_path / "s.csv")
 
 
-# ---------------- parser HTML (fixture sintético)
+# ---------------- parser del sitio oficial (extractos reales)
 
-def test_parse_synthetic_game_page():
-    html = (FIX / "synthetic_game.html").read_text()
-    url = "https://www.laliganacional.com.ar/laliga/partido/v2abcDEF123==/equipo-a-vs-equipo-b"
-    g = parse_game_page(html, url, "2026-27", today=date(2026, 10, 29))
-    assert (g.home_team.name, g.away_team.name) == ("EQUIPO A", "EQUIPO B")
-    assert (g.home_team.source_id, g.away_team.source_id) == ("11", "22")
-    assert g.date == "2026-10-05" and g.status == "final"
-    assert (g.home_score, g.away_score) == (20, 15)
-    assert g.source_ref == "v2abcDEF123=="
-    perez = next(p for p in g.players if p.name.startswith("PEREZ"))
-    assert perez.starter is True and perez.source_id == "1001"
-    assert perez.stats["fg3m"] == 2 and perez.stats["fg3a"] == 4 and perez.stats["plus_minus"] == 6
-    lopez = next(p for p in g.players if p.name.startswith("LOPEZ"))
-    assert lopez.did_not_play and lopez.stats["pts"] is None
-    assert g.team_totals["home"]["pts"] == 20
-    assert validate_game(g).ok
+GAME_URL = "https://www.laliganacional.com.ar/laliga/partido/v23PSIaSmF8N15R8lLFu-n6OixyEgi4NMoo7Uwd0lv193Q63IGXr5fwg==/lanus-vs-gimnasia-cr"
 
 
-def test_discover_ignores_live_widget_links():
-    html = (FIX / "synthetic_game.html").read_text()
-    found = discover_game_urls(html)
-    assert [t for t, _ in found] == ["v2abcDEF123=="]
+def test_parse_real_fixture():
+    games = parse_fixture((FIX / "real_fixture_excerpt.html").read_text())
+    g = games[0]
+    assert len(games) == 3
+    assert (g.date, g.time, g.venue) == ("2026-09-28", "22:05", "ANTONIO ROTILI")
+    assert (g.home.name, g.home.club_id, g.away.name, g.away.club_id) == ("LANÚS", "63", "GIMNASIA (CR)", "1474")
+    assert (g.home_score, g.away_score) == (74, 92)
+    assert g.url == GAME_URL and g.token.startswith("v23PSIaSmF8N")
+
+
+def test_parse_real_boxscore_and_validate():
+    fx = parse_fixture((FIX / "real_fixture_excerpt.html").read_text())[0]
+    box = parse_boxscore((FIX / "real_game_excerpt.html").read_text())
+    assert box.club_order == ["63", "1474"] and len(box.players) == 24
+    rec = build_record(fx, box, "2026-27", date(2026, 10, 29))
+    assert rec.status == "final" and rec.detail_level == "box_score"
+    franchino = next(p for p in rec.players if p.source_id == "219791")
+    assert franchino.name == "Franchino, Martin" and franchino.starter and franchino.side == "home"
+    assert franchino.stats["pts"] == 23 and franchino.stats["minutes_sec"] == 33 * 60 + 41
+    assert (franchino.stats["fg2m"], franchino.stats["fg2a"], franchino.stats["dreb"], franchino.stats["oreb"]) == (7, 9, 7, 3)
+    assert (franchino.stats["pfd"], franchino.stats["eff"], franchino.stats["plus_minus"]) == (9, 35, -8)
+    brussino = next(p for p in rec.players if p.name.startswith("Brussino"))
+    assert brussino.did_not_play  # 00:00 en la planilla
+    assert rec.team_totals["home"]["pts"] == 74 and rec.team_totals["away"]["reb"] == 29
+    res = validate_game(rec)
+    assert res.ok, res.errors
+
+
+def test_zero_zero_in_fixture_means_not_played():
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup((FIX / "real_fixture_excerpt.html").read_text(), "html.parser")
+    for td in soup.select("tr.fila-tabla-calendarios")[0].select("td.resultados"):
+        td.string = "0"
+    g = parse_fixture(str(soup))[0]
+    assert (g.home_score, g.away_score) == (None, None)
+
+
+def test_game_today_is_not_marked_final():
+    fx = parse_fixture((FIX / "real_fixture_excerpt.html").read_text())[0]
+    assert build_record(fx, None, "2026-27", date(2026, 9, 28)).status == "unknown"
+
+
+def test_parse_game_page_without_fixture():
+    rec = parse_game_page((FIX / "real_game_excerpt.html").read_text(), GAME_URL, "2026-27",
+                          today=date(2026, 10, 29), game_date="2026-09-28")
+    assert (rec.home_team.name, rec.away_team.name) == ("LANÚS", "GIMNASIA (CR)")
+    assert (rec.home_score, rec.away_score) == (74, 92) and validate_game(rec).ok
+
+
+def test_parse_real_standings():
+    rows = parse_standings((FIX / "real_standings_excerpt.html").read_text())
+    assert rows[0].team == "QUIMSA" and rows[0].club_id == "1869" and (rows[0].pj, rows[0].pg, rows[0].pts) == (5, 5, 10)
+
+
+def test_names_and_seasons():
+    assert pretty_name("WHITFIELD III, ROBERT JAMARCUS") == "Whitfield III, Robert Jamarcus"
+    assert pretty_name("D'AMARO, LUCIANO") == "D'Amaro, Luciano"
+    assert pretty_name("JOHNSON JR, MELVIN TYRIEK") == "Johnson Jr., Melvin Tyriek"
+    assert season_code_for(date(2026, 10, 1)) == "2026-27"
+    assert season_code_for(date(2027, 5, 1)) == "2026-27"
 
 
 # ---------------- demo + export
@@ -187,3 +229,11 @@ def test_demo_data_is_consistent_and_flagged(conn):
     data = build_export(conn, "demo")
     assert data["meta"]["mode"] == "demo"
     assert all(t["name"].startswith("Demo ") for t in data["teams"])
+
+
+def test_url_token_change_is_not_a_content_change(conn):
+    g1 = make_game(source_ref="tokenA", source_url="https://x/partido/tokenA/a-vs-b")
+    g2 = make_game(source_ref="tokenB", source_url="https://x/partido/tokenB/a-vs-b")
+    ingest_records(conn, [g1], "csv", "t", verbose=False)
+    r = ingest_records(conn, [g2], "csv", "t", verbose=False)
+    assert r["unchanged"] == 1
