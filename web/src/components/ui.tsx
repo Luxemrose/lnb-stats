@@ -5,6 +5,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { downloadText, toCsv } from "../lib/format";
+import { useCrest } from "./Crest";
 
 export type Icon = LucideIcon;
 
@@ -180,8 +181,14 @@ export function Avatar({ name, size = 40, tone = "neutral" }: { name: string; si
   );
 }
 
-/** Monograma de equipo (la app no usa escudos de terceros). */
-export function TeamMark({ name, size = 36 }: { name: string; size?: number }) {
+/** Escudo oficial del equipo (si existe) o, como respaldo, un monograma con sus iniciales. */
+export function TeamMark({ name, size = 36, teamId }: { name: string; size?: number; teamId?: number | null }) {
+  const url = useCrest(teamId);
+  const [broken, setBroken] = useState(false);
+  if (url && !broken) {
+    return <img src={url} alt="" aria-hidden loading="lazy" decoding="async" className="shrink-0 object-contain"
+      style={{ width: size, height: size }} onError={() => setBroken(true)} />;
+  }
   const clean = name.replace(/\(.*?\)/g, "").trim();
   const words = clean.split(/\s+/);
   const ini = (words.length > 1 ? words[0][0] + words[1][0] : clean.slice(0, 2)).toUpperCase();
@@ -387,7 +394,7 @@ export function DataTable<T>({ rows, columns, initialSort, initialDir = "desc", 
                   const isBest = best.has(c.key) && v === best.get(c.key);
                   return (
                     <td key={c.key}
-                      className={`${pad} whitespace-nowrap border-b border-line group-last:border-0 group-hover:bg-surface-2 ${c.align === "left" ? "text-left" : "text-right"} ${c.sticky ? "sticky left-0 z-10 bg-surface" : ""} ${isBest ? "font-semibold text-accent-text" : ""}`}>
+                      className={`${pad} whitespace-nowrap border-b border-line group-last:border-0 group-hover:bg-surface-2 ${c.align === "left" ? "text-left" : "text-right"} ${c.sticky ? "sticky left-0 z-10 bg-surface" : "relative"} ${isBest ? "font-semibold text-accent-text" : ""}`}>
                       {c.render ? c.render(r) : (v ?? <span className="text-muted">s/d</span>)}
                     </td>
                   );

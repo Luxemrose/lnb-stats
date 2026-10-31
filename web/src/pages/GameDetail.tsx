@@ -2,7 +2,8 @@ import { Link, useParams } from "react-router-dom";
 import { CalendarDays, Clock, ExternalLink, LayoutDashboard, MapPin, Medal, Swords, Users } from "lucide-react";
 import { HeadToHead, type CmpEntity, type CmpRow } from "../components/compare";
 import { useThemeColors } from "../components/charts";
-import { Avatar, Badge, Card, DataTable, EmptyState, Notice, Origin, PageHeader, PlayerLink, Tabs, TeamMark, useUrlTab } from "../components/ui";
+import { CrestBox, CrestCell } from "../components/Crest";
+import { Badge, Card, DataTable, EmptyState, Notice, Origin, PageHeader, PlayerLink, Tabs, TeamMark, useUrlTab } from "../components/ui";
 import { useSeason } from "../lib/data";
 import { teamGames } from "../lib/derive";
 import { COUNT_LABELS, f0, fdate, fdatetime, mmss, pct } from "../lib/format";
@@ -38,8 +39,8 @@ export default function GameDetail() {
   const st = STATUS[g.status];
 
   const entities: CmpEntity[] = [
-    { id: g.homeTeamId, name: tname(g.homeTeamId), color: colors.series[0], games: 1, kind: "team" },
-    { id: g.awayTeamId, name: tname(g.awayTeamId), color: colors.series[1], games: 1, kind: "team" },
+    { id: g.homeTeamId, name: tname(g.homeTeamId), color: colors.series[0], games: 1, kind: "team", crestTeamId: g.homeTeamId },
+    { id: g.awayTeamId, name: tname(g.awayTeamId), color: colors.series[1], games: 1, kind: "team", crestTeamId: g.awayTeamId },
   ];
   const ts = (l: typeof hl) => l?.stats as StatLine | null | undefined;
   const pctOf = (m: number | null | undefined, a: number | null | undefined) => (m == null || a == null ? null : ratio(m, a));
@@ -67,7 +68,7 @@ export default function GameDetail() {
         <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-accent" />
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-6">
           <Link to={`/equipos/${g.homeTeamId}`} className="group flex flex-col items-center gap-2 text-center">
-            <TeamMark name={tname(g.homeTeamId)} size={56} />
+            <TeamMark teamId={g.homeTeamId} name={tname(g.homeTeamId)} size={64} />
             <span className={`text-sm font-semibold group-hover:text-accent-text sm:text-base ${hasScore && !homeWin ? "text-ink-2" : ""}`}>{tname(g.homeTeamId)}</span>
             <span className="text-[11px] uppercase tracking-wide text-muted">Local</span>
           </Link>
@@ -78,7 +79,7 @@ export default function GameDetail() {
             <div className="mt-2"><Badge tone={st.tone}>{st.label}</Badge></div>
           </div>
           <Link to={`/equipos/${g.awayTeamId}`} className="group flex flex-col items-center gap-2 text-center">
-            <TeamMark name={tname(g.awayTeamId)} size={56} />
+            <TeamMark teamId={g.awayTeamId} name={tname(g.awayTeamId)} size={64} />
             <span className={`text-sm font-semibold group-hover:text-accent-text sm:text-base ${hasScore && homeWin ? "text-ink-2" : ""}`}>{tname(g.awayTeamId)}</span>
             <span className="text-[11px] uppercase tracking-wide text-muted">Visitante</span>
           </Link>
@@ -98,7 +99,7 @@ export default function GameDetail() {
                 {teamRows.length ? <HeadToHead a={entities[0]} b={entities[1]} rows={teamRows} /> : <p className="text-sm text-muted">Sin totales de equipo.</p>}
               </Card>
               <Card className="xl:col-span-2" icon={Medal} title="Destacados del partido">
-                <GameLeaders rows={rows} homeId={g.homeTeamId} name={(pid) => sd.db.playersById.get(pid)!.name} teamName={tname} />
+                <GameLeaders rows={rows} name={(pid) => sd.db.playersById.get(pid)!.name} teamName={tname} />
               </Card>
             </div>
           )}
@@ -111,7 +112,7 @@ export default function GameDetail() {
   );
 }
 
-function GameLeaders({ rows, homeId, name, teamName }: { rows: PlayerGameRow[]; homeId: number; name: (id: number) => string; teamName: (id: number) => string }) {
+function GameLeaders({ rows, name, teamName }: { rows: PlayerGameRow[]; name: (id: number) => string; teamName: (id: number) => string }) {
   const cats: { key: CountKey; label: string }[] = [{ key: "pts", label: "Puntos" }, { key: "reb", label: "Rebotes" }, { key: "ast", label: "Asistencias" }, { key: "eff", label: "Valoración" }];
   return (
     <div className="space-y-4">
@@ -119,14 +120,17 @@ function GameLeaders({ rows, homeId, name, teamName }: { rows: PlayerGameRow[]; 
         const top = [...rows].filter((r) => !r.dnp && r[c.key] !== null).sort((a, b) => (b[c.key] as number) - (a[c.key] as number))[0];
         if (!top) return null;
         return (
-          <Link key={c.key} to={`/jugadores/${top.playerId}`} className="group flex items-center gap-3">
-            <Avatar name={name(top.playerId)} size={36} tone={top.teamId === homeId ? "var(--s1)" : "var(--s2)"} />
+          <Link key={c.key} to={`/jugadores/${top.playerId}`} className="group block">
+            <CrestBox teamId={top.teamId} className="rounded-xl">
+            <span className="flex items-center gap-3 py-1 pl-11">
             <span className="min-w-0 flex-1">
               <span className="eyebrow block">{c.label}</span>
               <span className="block truncate text-sm font-semibold group-hover:text-accent-text">{name(top.playerId)}</span>
               <span className="block truncate text-xs text-muted">{teamName(top.teamId)}</span>
             </span>
             <span className="num text-2xl font-bold">{top[c.key]}</span>
+            </span>
+            </CrestBox>
           </Link>
         );
       })}
@@ -146,8 +150,8 @@ function BoxScore({ rows, teamId, gameDate, sd, totals, origin }: {
       <DataTable rows={ordered} rowKey={(r) => r.playerId} dense pageSize={0} csvName={`planilla-${gameDate}-${tname}.csv`.replace(/[^\w.-]+/g, "_")}
         columns={[
           { key: "name", label: "Jugador", align: "left", sticky: true, value: (r) => sd.db.playersById.get(r.playerId)!.name,
-            render: (r) => <span className="flex items-center gap-1.5">{r.starter ? <span title="Titular" className="h-1.5 w-1.5 rounded-full bg-accent" /> : <span className="w-1.5" />}
-              <PlayerLink id={r.playerId} name={sd.db.playersById.get(r.playerId)!.name} />{r.dnp ? <span className="text-xs text-muted">(no jugó)</span> : null}</span> },
+            render: (r) => <CrestCell teamId={r.teamId}><span className="flex items-center gap-1.5 pl-6">{r.starter ? <span title="Titular" className="h-1.5 w-1.5 rounded-full bg-accent" /> : <span className="w-1.5" />}
+              <PlayerLink id={r.playerId} name={sd.db.playersById.get(r.playerId)!.name} />{r.dnp ? <span className="text-xs text-muted">(no jugó)</span> : null}</span></CrestCell> },
           { key: "min", label: "MIN", value: (r) => r.minutes_sec, render: (r) => mmss(r.minutes_sec) },
           { key: "pts", label: "PTS", value: (r) => r.pts, highlight: "max" },
           { key: "t2", label: "T2", title: "Dobles C/I", value: (r) => r.fg2m, render: (r) => pair(r.fg2m, r.fg2a) },

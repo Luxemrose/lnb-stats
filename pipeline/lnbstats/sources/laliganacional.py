@@ -82,7 +82,8 @@ class PoliteFetcher:
         if not self._robots.can_fetch(self.ua, url):
             raise SourceBlocked(f"robots.txt no permite {url}")
 
-    def get(self, url: str, save_as: Optional[str] = None) -> str:
+    def _request(self, url: str) -> tuple[bytes, Optional[str]]:
+        """Pedido con pausa entre pedidos, reintentos ante errores de red/5xx y freno ante 403/429."""
         self._check_robots(url)
         wait = self.min_interval - (time.monotonic() - self._last)
         if wait > 0:
@@ -94,9 +95,7 @@ class PoliteFetcher:
             try:
                 req = urllib.request.Request(url, headers={"User-Agent": self.ua, "Accept-Language": "es-AR,es"})
                 with urllib.request.urlopen(req, timeout=self.timeout) as r:
-                    body = r.read().decode(r.headers.get_content_charset() or "utf-8", "replace")
-                self._save_raw(url, body, save_as)
-                return body
+                    return r.read(), r.headers.get_content_charset()
             except urllib.error.HTTPError as e:
                 if e.code in (401, 403, 429):
                     raise SourceBlocked(f"HTTP {e.code} en {url}") from e
@@ -107,6 +106,16 @@ class PoliteFetcher:
                 last_err = e
             time.sleep(5 * (attempt + 1))
         raise ConnectionError(f"No se pudo descargar {url}: {last_err}")
+
+    def get(self, url: str, save_as: Optional[str] = None) -> str:
+        data, charset = self._request(url)
+        body = data.decode(charset or "utf-8", "replace")
+        self._save_raw(url, body, save_as)
+        return body
+
+    def get_bytes(self, url: str) -> bytes:
+        """Descarga binaria (imágenes de escudos)."""
+        return self._request(url)[0]
 
     def _save_raw(self, url: str, body: str, save_as: Optional[str]) -> None:
         """Guarda la respuesta original: permite re-procesar sin volver a pedirla y auditar cambios."""
@@ -137,6 +146,8 @@ class FixtureTeam:
     name: str
     club_id: str
     team_id: str
+    crest_src: Optional[str] = None   # p. ej. "/escudos/63/112600" (imagen oficial del escudo)
+    crest_alt: Optional[str] = None   # texto alternativo de esa imagen (nombre del equipo según el sitio)
 
 
 @dataclass
@@ -165,6 +176,15 @@ def _team_from_cell(td) -> FixtureTeam:
     return FixtureTeam(name=name, club_id=m.group(1), team_id=m.group(2))
 
 
+def _with_crest(team: FixtureTeam, img) -> FixtureTeam:
+    """Asocia la imagen del escudo de la fila del fixture (mismo idClub/idEquipo que el enlace del equipo)."""
+    if img is not None and img.get("src"):
+        m = re.match(r"/escudos/(\d+)/(\d+)", img["src"])
+        if m and (m.group(1), m.group(2)) == (team.club_id, team.team_id):
+            team.crest_src, team.crest_alt = img["src"], img.get("alt")
+    return team
+
+
 def _int_or_none(s: str) -> Optional[int]:
     s = s.strip()
     return int(s) if re.fullmatch(r"\d+", s) else None
@@ -176,6 +196,7 @@ def parse_fixture(html: str) -> list[FixtureGame]:
     games = []
     for tr in rows:
         names = tr.select("td.celda-nombre")
+        crests = tr.select("td.celda-escudo img.escudo")
         scores = tr.select("td.resultados")
         when = tr.select_one("td.fecha-campo")
         if len(names) != 2 or len(scores) != 2 or when is None:
@@ -193,7 +214,8 @@ def parse_fixture(html: str) -> list[FixtureGame]:
         games.append(FixtureGame(
             date=f"{m.group(3)}-{m.group(2)}-{m.group(1)}", time=m.group(4),
             venue=venue.get_text(" ", strip=True) if venue else None,
-            home=_team_from_cell(names[0]), away=_team_from_cell(names[1]),
+            home=_with_crest(_team_from_cell(names[0]), crests[0] if len(crests) == 2 else None),
+            away=_with_crest(_team_from_cell(names[1]), crests[1] if len(crests) == 2 else None),
             home_score=hs, away_score=as_,
             url=urljoin(BASE, link["href"]) if link else None, token=token))
     return games

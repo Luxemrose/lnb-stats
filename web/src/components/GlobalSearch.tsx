@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, CornerDownLeft, Search, SearchX, Shield, UserRound, X } from "lucide-react";
 import { useData } from "../lib/data";
+import { CrestLayer } from "./Crest";
 import { fdate } from "../lib/format";
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/[^a-z0-9/ ]/g, " ").trim();
 
-interface Hit { kind: "player" | "team" | "game"; id: number; label: string; sub: string; to: string }
+interface Hit { kind: "player" | "team" | "game"; id: number; label: string; sub: string; to: string; teamId?: number | null }
 
 /** Buscador global (Ctrl/Cmd + K o "/"): jugadores, equipos y partidos. */
 export function GlobalSearch({ onClose }: { onClose: () => void }) {
@@ -26,7 +27,7 @@ export function GlobalSearch({ onClose }: { onClose: () => void }) {
       lastTeam.set(r.playerId, r.teamId);
     }
     return {
-      players: db.ds.players.map((p) => ({ id: p.id, label: p.name, key: norm(p.name), sub: teamName(lastTeam.get(p.id) ?? -1) })),
+      players: db.ds.players.map((p) => ({ id: p.id, label: p.name, key: norm(p.name), sub: teamName(lastTeam.get(p.id) ?? -1), teamId: lastTeam.get(p.id) ?? null })),
       teams: db.ds.teams.map((t) => ({ id: t.id, label: t.name, key: norm(t.name) })),
       games: db.ds.games.map((g) => ({
         g, key: norm(`${teamName(g.homeTeamId)} ${teamName(g.awayTeamId)} ${fdate(g.date)}`),
@@ -41,9 +42,9 @@ export function GlobalSearch({ onClose }: { onClose: () => void }) {
     const words = n.split(/\s+/);
     const has = (key: string) => words.every((w) => key.includes(w));
     const players = index.players.filter((p) => has(p.key)).slice(0, 6)
-      .map((p): Hit => ({ kind: "player", id: p.id, label: p.label, sub: p.sub || "Jugador", to: `/jugadores/${p.id}` }));
+      .map((p): Hit => ({ kind: "player", id: p.id, label: p.label, sub: p.sub || "Jugador", to: `/jugadores/${p.id}`, teamId: p.teamId }));
     const teams = index.teams.filter((t) => has(t.key)).slice(0, 5)
-      .map((t): Hit => ({ kind: "team", id: t.id, label: t.label, sub: "Equipo", to: `/equipos/${t.id}` }));
+      .map((t): Hit => ({ kind: "team", id: t.id, label: t.label, sub: "Equipo", to: `/equipos/${t.id}`, teamId: t.id }));
     const games = index.games.filter((x) => has(x.key)).sort((a, b) => b.g.date.localeCompare(a.g.date)).slice(0, 6)
       .map((x): Hit => ({ kind: "game", id: x.g.id, label: x.label, sub: fdate(x.g.date), to: `/partidos/${x.g.id}` }));
     return [...players, ...teams, ...games];
@@ -86,9 +87,10 @@ export function GlobalSearch({ onClose }: { onClose: () => void }) {
               <div key={`${h.kind}-${h.id}`}>
                 {first && <div className="eyebrow px-3 pb-1 pt-3">{groupLabel[h.kind]}</div>}
                 <button onMouseEnter={() => setIdx(i)} onClick={() => go(h)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left ${i === idx ? "bg-surface-2" : ""}`}>
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-3 text-ink-2"><Ico size={15} /></span>
-                  <span className="min-w-0 flex-1">
+                  className={`relative flex w-full items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-left ${i === idx ? "bg-surface-2" : ""}`}>
+                  {h.teamId ? <CrestLayer teamId={h.teamId} /> : null}
+                  <span className="crest-content grid h-8 w-8 shrink-0 place-items-center rounded-lg text-ink-2">{h.teamId ? null : <Ico size={15} />}</span>
+                  <span className="crest-content min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{h.label}</span>
                     <span className="block truncate text-xs text-muted">{h.sub}</span>
                   </span>

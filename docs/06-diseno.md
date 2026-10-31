@@ -50,3 +50,38 @@ Por eso el comparador admite como máximo 4 jugadores o equipos. Los gráficos u
 - Tooltips (ícono ⓘ) para métricas menos conocidas: TS%, eFG%, valoración, +/-, por 40'.
 - Estados de carga con skeletons; estados vacíos con explicación y acción; errores de carga con "Reintentar".
 - Responsive verificado en 390 px (celular), 820 px (tablet) y 1440 px (escritorio), sin desplazamiento horizontal.
+
+## Escudos oficiales como fondo
+
+**Origen (verificado el 31/10/2026):** cada fila del fixture oficial muestra
+`<img class="escudo" src="/escudos/{idClub}/{idEquipo}" alt="{EQUIPO}">`. El pipeline
+(`pipeline/lnbstats/crests.py`, llamado desde `sync`) sólo acepta la imagen si:
+
+1. su `idClub/idEquipo` coincide con el del enlace del equipo en la misma fila, y
+2. su texto alternativo coincide con el nombre del equipo.
+
+La imagen (JPEG con fondo liso) se descarga **una sola vez por equipo y temporada**; se quita sólo el
+fondo liso que toca los bordes (el dibujo no se toca), se recorta y se guarda como WebP transparente en
+`web/public/escudos/{idClub}-{idEquipo}.webp` (~8 KB). La relación queda en la tabla `team_seasons`
+(temporada, equipo, idEquipo de la Liga, archivo, error) y se exporta como `teamSeasons`.
+Si un escudo no se puede obtener, se registra en *Estado de datos* y la app no muestra nada en su lugar.
+
+**Qué escudo corresponde a cada jugador** (`contextTeam` en `web/src/lib/derive.ts`, con prueba):
+el equipo de su último partido dentro del período consultado; en planillas, el equipo de ese partido;
+en el plantel de un equipo, ese equipo. Siempre por ids, nunca por nombre.
+
+**Componente** `web/src/components/Crest.tsx`:
+
+| Pieza | Uso |
+|---|---|
+| `useCrest(teamId)` | escudo del equipo en la temporada activa (si no hay, el más reciente) |
+| `CrestCell` | dentro de celdas de `DataTable` (las celdas ya están posicionadas) |
+| `CrestBox` | tarjetas y filas fuera de tablas |
+| `CrestLayer` | la capa sola (encabezados de tabla, resultados del buscador) |
+| `TeamMark` (ui.tsx) | escudo como logo (fichas de equipo, marcador); monograma si no hay |
+
+**CSS** (`index.css`, `.crest-layer`): capa absoluta que ocupa la celda sin cambiar su tamaño, escudo
+desde el borde izquierdo con `object-fit: contain`, alto ≈ 118 % de la celda (recortado), opacidad
+`--crest-opacity` (0,30 oscuro · 0,20 claro) y máscara `linear-gradient` hacia la derecha. Como se
+desvanece a transparente, se integra con cualquier fondo (normal, hover, alternancia, temas). El texto
+va encima (`.crest-content`). Si una imagen falla, se recuerda y no se reintenta en la misma visita.

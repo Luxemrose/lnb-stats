@@ -34,6 +34,7 @@
   --axis: #3a4456;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.18);
   --s1: #4389ff; --s2: #e8691e; --s3: #1e9e77; --s4: #b38a12;
+  --crest-opacity: 0.3;
 }
 :root[data-theme="light"] {
   color-scheme: light;
@@ -62,6 +63,7 @@
   --axis: #c9d0db;
   --shadow: 0 1px 2px rgba(16, 20, 29, 0.06), 0 8px 24px rgba(16, 20, 29, 0.06);
   --s1: #2a6fdb; --s2: #d9631b; --s3: #168a68; --s4: #b08a0c;
+  --crest-opacity: 0.2;
 }
 
 @theme inline {
@@ -171,6 +173,30 @@ body {
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
 }
+
+/*
+ * Escudo de fondo (componente Crest.tsx). La capa ocupa todo el contenedor posicionado,
+ * no modifica anchos ni altos, no recibe clics y queda debajo del texto.
+ * El escudo arranca en el borde izquierdo, ocupa el alto de la celda y se desvanece
+ * hacia la derecha con una máscara (funciona sobre cualquier color: hover, alternancia, temas).
+ */
+.crest-layer {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  border-radius: inherit;
+}
+.crest-layer img {
+  position: absolute; left: -4px; top: 50%;
+  height: 118%; width: auto; max-width: none;
+  transform: translateY(-50%);
+  object-fit: contain;
+  opacity: var(--crest-opacity);
+  -webkit-mask-image: linear-gradient(to right, #000 0%, rgba(0, 0, 0, 0.75) 35%, rgba(0, 0, 0, 0.25) 70%, transparent 100%);
+          mask-image: linear-gradient(to right, #000 0%, rgba(0, 0, 0, 0.75) 35%, rgba(0, 0, 0, 0.25) 70%, transparent 100%);
+  user-select: none;
+}
+.crest-card img { height: 135%; left: -10px; opacity: calc(var(--crest-opacity) * 0.85); }
+.crest-hero img { height: 170%; left: -24px; opacity: calc(var(--crest-opacity) * 0.6); }
+.crest-content { position: relative; z-index: 1; }
 
 .recharts-wrapper:focus, .recharts-surface:focus { outline: none; }
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }

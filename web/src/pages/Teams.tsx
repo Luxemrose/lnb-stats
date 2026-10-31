@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeftRight, BarChart3 } from "lucide-react";
 import { CalculatedTable, StandingsCard } from "../components/Standings";
-import { Card, Origin, PageHeader, ResultPill, TeamMark } from "../components/ui";
+import { CrestBox } from "../components/Crest";
+import { Card, Origin, PageHeader, ResultPill } from "../components/ui";
 import { useSeason } from "../lib/data";
 import { f1, pct, signed } from "../lib/format";
 import { standings } from "../lib/stats";
@@ -27,8 +28,9 @@ export default function Teams() {
           const r = rec.get(id);
           const o = official.get(id);
           return (
-            <Link key={id} to={`/equipos/${id}`} className="card card-hover flex items-center gap-3.5 p-4">
-              <TeamMark name={t.name} size={44} />
+            <Link key={id} to={`/equipos/${id}`} className="card card-hover block overflow-hidden">
+              <CrestBox teamId={id} size="card" className="rounded-[13px]">
+              <div className="flex items-center gap-3.5 p-4 pl-[72px]">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   {o && <span className="num text-xs font-semibold text-muted">{o.position}.º</span>}
@@ -44,6 +46,8 @@ export default function Teams() {
                 <span className="flex gap-0.5">{(r?.last5 ?? []).map((x, i) => <ResultPill key={i} r={x} />)}</span>
                 <span className="num text-[11px] text-muted">{r ? `${f1(r.pfPerGame)} PF · ${f1(r.paPerGame)} PC` : ""}</span>
               </div>
+              </div>
+              </CrestBox>
             </Link>
           );
         })}

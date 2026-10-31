@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Crown, Search, Shield, Trophy, Users } from "lucide-react";
-import { Avatar, Card, DataTable, Field, FilterBar, InfoTip, PageHeader, Segmented, Tabs, TeamMark, useUrlTab, type Column } from "../components/ui";
+import { CrestBox, CrestCell } from "../components/Crest";
+import { Card, DataTable, Field, FilterBar, InfoTip, PageHeader, Segmented, Tabs, useUrlTab, type Column } from "../components/ui";
 import { useSeason } from "../lib/data";
 import { playerSummaries, teamPeriodData, type PlayerSummary } from "../lib/derive";
 import { f0, f1, pct, signed } from "../lib/format";
 import { GLOSSARY } from "../lib/glossary";
 import { METRICS, metricById, metricValue, ranking, type View } from "../lib/leaders";
 import { leaderMinGames, ratio, standings } from "../lib/stats";
-import { playerNameColumn } from "./Players";
+import { contextTeam, playerNameColumn } from "./Players";
 
 const TABS = [{ id: "jugadores", label: "Jugadores", icon: Users }, { id: "equipos", label: "Equipos", icon: Shield }];
 const GROUPS = ["Anotación", "Tiro", "Rebotes", "Juego", "Defensa", "Global"] as const;
@@ -100,15 +101,18 @@ function PlayerRankings() {
       {podium.length > 0 && team === "" && !q && (
         <div className="grid gap-3 sm:grid-cols-3">
           {podium.map((s, i) => (
-            <Link key={s.playerId} to={`/jugadores/${s.playerId}`} className={`card card-hover relative flex items-center gap-3.5 overflow-hidden p-4 ${i === 0 ? "border-accent/40" : ""}`}>
-              {i === 0 && <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-accent" />}
-              <span className={`num grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-bold ${i === 0 ? "bg-accent text-accent-ink" : "bg-surface-3 text-ink-2"}`}>{i + 1}</span>
-              <Avatar name={s.name} size={42} tone={i === 0 ? "accent" : "neutral"} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold">{s.name}</span>
-                <span className="block truncate text-xs text-muted">{tname(s.currentTeamId)} · {s.agg.games} PJ</span>
-              </span>
-              <span className={`num text-2xl font-bold ${i === 0 ? "text-accent-text" : ""}`}>{fmt(s)}</span>
+            <Link key={s.playerId} to={`/jugadores/${s.playerId}`} className={`card card-hover relative overflow-hidden ${i === 0 ? "border-accent/40" : ""}`}>
+              {i === 0 && <span aria-hidden className="absolute inset-x-0 top-0 z-[2] h-0.5 bg-accent" />}
+              <CrestBox teamId={contextTeam(s)} size="card" className="rounded-[13px]">
+                <div className="flex items-center gap-3.5 p-4 pl-14">
+                  <span className={`num grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-bold ${i === 0 ? "bg-accent text-accent-ink" : "bg-surface-3 text-ink-2"}`}>{i + 1}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">{s.name}</span>
+                    <span className="block truncate text-xs text-muted">{tname(contextTeam(s))} · {s.agg.games} PJ</span>
+                  </span>
+                  <span className={`num text-2xl font-bold ${i === 0 ? "text-accent-text" : ""}`}>{fmt(s)}</span>
+                </div>
+              </CrestBox>
             </Link>
           ))}
         </div>
@@ -171,7 +175,7 @@ function TeamRankings() {
           columns={[
             { key: "pos", label: "#", value: (r: R) => r.pos, render: (r: R) => <span className="font-semibold text-ink-2">{r.pos}</span>, width: "44px" },
             { key: "team", label: "Equipo", align: "left", sticky: true, value: (r: R) => sd.db.teamsById.get(r.id)!.name,
-              render: (r: R) => <Link className="link flex items-center gap-2.5 font-medium" to={`/equipos/${r.id}`}><TeamMark name={sd.db.teamsById.get(r.id)!.name} size={26} />{sd.db.teamsById.get(r.id)!.name}</Link> },
+              render: (r: R) => <CrestCell teamId={r.id}><Link className="link block pl-8 font-semibold" to={`/equipos/${r.id}`}>{sd.db.teamsById.get(r.id)!.name}</Link></CrestCell> },
             { key: "pj", label: "PJ", value: (r: R) => r.d.done.length },
             { key: "rec", label: "G-P", value: (r: R) => r.d.wins, render: (r: R) => `${r.d.wins}-${r.d.losses}` },
             { key: "val", label: c.label, value: (r: R) => value(r.d), render: (r: R) => <span className={`text-base font-bold ${r.pos === 1 ? "text-accent-text" : ""}`}>{fmt(value(r.d))}</span> },

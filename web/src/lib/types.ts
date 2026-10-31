@@ -34,6 +34,8 @@ export interface OfficialStanding {
   seasonId: number; phase: string; position: number; teamId: number;
   pj: number; pg: number; pp: number; pf: number; pc: number; pts: number; capturedAt: string;
 }
+/** Equipo en una temporada: id de inscripción de la Liga y escudo oficial (ruta local, o null si no se pudo obtener). */
+export interface TeamSeason { seasonId: number; teamId: number; sourceTeamId: string | null; crest: string | null }
 export interface OpenError { id: number; stage: string; ref: string | null; message: string; createdAt: string; retryCount: number }
 
 export interface Dataset {
@@ -44,4 +46,5 @@ export interface Dataset {
   seasons: Season[]; teams: Team[]; players: Player[]; rosters: Roster[]; games: Game[];
   playerStats: PlayerGameRow[]; teamStats: TeamGameRow[]; syncLogs: SyncLog[]; openErrors: OpenError[];
   officialStandings?: OfficialStanding[];
+  teamSeasons?: TeamSeason[];
 }

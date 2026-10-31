@@ -2,9 +2,10 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeftRight, Search, Users } from "lucide-react";
 import { PeriodPicker, defaultPeriod, describePeriod, toPeriod } from "../components/pickers";
-import { Avatar, DataTable, Field, FilterBar, PageHeader, Segmented, type Column } from "../components/ui";
+import { CrestCell } from "../components/Crest";
+import { DataTable, Field, FilterBar, PageHeader, Segmented, type Column } from "../components/ui";
 import { useSeason } from "../lib/data";
-import { playerSummaries, type PlayerSummary } from "../lib/derive";
+import { contextTeam, playerSummaries, type PlayerSummary } from "../lib/derive";
 import { COUNT_LABELS, PCT_LABELS, f0, f1, pct } from "../lib/format";
 import { GLOSSARY } from "../lib/glossary";
 import type { CountKey, PctKey } from "../lib/stats";
@@ -41,18 +42,23 @@ export function statColumns(view: View, full = true): Column<PlayerSummary>[] {
   ];
 }
 
-export function playerNameColumn(teamName: (id: number | null) => string): Column<PlayerSummary> {
+export { contextTeam };
+
+/** Columna "Jugador" con el escudo de su equipo de fondo. `fixedTeam` fuerza el equipo (p. ej. en el plantel de un equipo). */
+export function playerNameColumn(teamName: (id: number | null) => string, fixedTeam?: number): Column<PlayerSummary> {
   return {
     key: "name", label: "Jugador", align: "left", sticky: true, value: (s) => s.name,
-    render: (s) => (
-      <Link to={`/jugadores/${s.playerId}`} className="group flex min-w-[180px] items-center gap-2.5">
-        <Avatar name={s.name} size={28} />
-        <span className="min-w-0">
-          <span className="block truncate font-medium group-hover:text-accent-text">{s.name}</span>
-          <span className="block truncate text-[11px] text-muted">{teamName(s.currentTeamId)}{s.jersey ? ` · #${s.jersey}` : ""}</span>
-        </span>
-      </Link>
-    ),
+    render: (s) => {
+      const tid = fixedTeam ?? contextTeam(s);
+      return (
+        <CrestCell teamId={tid}>
+          <Link to={`/jugadores/${s.playerId}`} className="group block min-w-[170px] pl-7">
+            <span className="block truncate font-medium group-hover:text-accent-text">{s.name}</span>
+            <span className="block truncate text-[11px] text-muted">{teamName(tid)}{s.jersey ? ` · #${s.jersey}` : ""}</span>
+          </Link>
+        </CrestCell>
+      );
+    },
   };
 }
 

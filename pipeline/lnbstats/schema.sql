@@ -150,3 +150,15 @@ CREATE TABLE IF NOT EXISTS official_standings (
   captured_at   TEXT NOT NULL,
   PRIMARY KEY (season_id, phase, team_id)
 );
+
+-- Equipo en cada temporada: id de inscripción de la Liga y escudo oficial.
+CREATE TABLE IF NOT EXISTS team_seasons (
+  season_id       INTEGER NOT NULL REFERENCES seasons(id),
+  team_id         INTEGER NOT NULL REFERENCES teams(id),
+  source_team_id  TEXT,                         -- idEquipo de la Liga (cambia cada temporada)
+  crest_source    TEXT,                         -- ruta oficial, p. ej. /escudos/63/112600
+  crest_file      TEXT,                         -- archivo local en web/public/escudos/
+  crest_error     TEXT,                         -- motivo si no se pudo obtener
+  updated_at      TEXT NOT NULL,
+  PRIMARY KEY (season_id, team_id)
+);

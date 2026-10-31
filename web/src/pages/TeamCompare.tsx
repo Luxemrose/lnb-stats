@@ -33,7 +33,7 @@ export default function TeamCompare() {
     id, name: sd.db.teamsById.get(id)!.name, color: colors.series[i], d: teamPeriodData(sd, id, toPeriod(period)),
   }));
   const entities: CmpEntity[] = sel.map((s) => ({
-    id: s.id, name: s.name, color: s.color, kind: "team", games: s.d.done.length, sub: `${s.d.wins}-${s.d.losses} en el período`,
+    id: s.id, name: s.name, color: s.color, kind: "team", crestTeamId: s.id, games: s.d.done.length, sub: `${s.d.wins}-${s.d.losses} en el período`,
     meta: `${signed(ratio(s.d.pf - s.d.pa, s.d.done.length))} DIF/PJ`,
   }));
   const per = (s: Sel, v: number) => ratio(v, s.d.done.length);

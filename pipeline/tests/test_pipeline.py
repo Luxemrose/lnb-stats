@@ -250,3 +250,34 @@ def test_dump_roundtrip_rebuilds_database(tmp_path):
     c2 = connect(db)
     assert c2.execute("SELECT COUNT(*) FROM games").fetchone()[0] == 1
     assert c2.execute("SELECT COUNT(*) FROM player_game_stats").fetchone()[0] == 2
+
+
+# ---------------- escudos oficiales
+
+def test_fixture_captures_official_crest_with_matching_ids():
+    g = parse_fixture((FIX / "real_fixture_excerpt.html").read_text())[0]
+    assert g.home.crest_src == "/escudos/63/112600" and g.home.crest_alt == "LANÚS"
+    assert g.away.crest_src == "/escudos/1474/112553" and g.away.crest_alt == "GIMNASIA (CR)"
+
+
+def test_crest_alt_must_match_team_name():
+    from lnbstats.crests import alt_matches
+    assert alt_matches("LAN&#xDA;S", "LANÚS")
+    assert alt_matches("GIMNASIA (CR)", "Gimnasia (CR)")
+    assert not alt_matches("BOCA", "LANÚS")
+    assert not alt_matches(None, "LANÚS")
+
+
+def test_remove_flat_background_keeps_crest_and_clears_corners():
+    import io
+    from PIL import Image, ImageDraw
+    from lnbstats.crests import remove_flat_background
+    im = Image.new("RGB", (100, 100), (0, 0, 0))
+    ImageDraw.Draw(im).ellipse((20, 20, 80, 80), fill=(30, 90, 200))
+    buf = io.BytesIO(); im.save(buf, format="JPEG", quality=90)
+    out = Image.open(io.BytesIO(remove_flat_background(buf.getvalue())))
+    assert out.format == "WEBP" and out.mode == "RGBA"
+    assert out.getpixel((0, 0))[3] < 30                      # esquina: fondo transparente
+    cx, cy = out.size[0] // 2, out.size[1] // 2
+    assert out.getpixel((cx, cy))[3] > 240                   # centro: escudo opaco
+    assert out.size[0] <= 70 and out.size[1] <= 70           # recortado al contorno

@@ -14,6 +14,9 @@ export interface Db {
   rowsByPlayer: Map<number, DatedRow[]>;
   rowsByGame: Map<number, PlayerGameRow[]>;
   teamRowsByGame: Map<number, TeamGameRow[]>;
+  /** Escudo oficial por temporada y equipo ("temporada:equipo") y, como respaldo, el más reciente de cada equipo. */
+  crestBySeasonTeam: Map<string, string>;
+  crestByTeam: Map<number, string>;
 }
 
 interface Ctx {
@@ -54,8 +57,15 @@ function index(ds: Dataset, mode: Mode): Db {
   for (const l of rowsByPlayer.values()) l.sort((a, b) => a.date.localeCompare(b.date) || a.gameId - b.gameId);
   const teamRowsByGame = new Map<number, TeamGameRow[]>();
   for (const r of ds.teamStats) teamRowsByGame.set(r.gameId, [...(teamRowsByGame.get(r.gameId) ?? []), r]);
+  const crestBySeasonTeam = new Map<string, string>();
+  const crestByTeam = new Map<number, string>();
+  for (const ts of [...(ds.teamSeasons ?? [])].sort((a, b) => a.seasonId - b.seasonId)) {
+    if (!ts.crest) continue;
+    crestBySeasonTeam.set(`${ts.seasonId}:${ts.teamId}`, ts.crest);
+    crestByTeam.set(ts.teamId, ts.crest);
+  }
   return {
-    ds, mode, gamesById, rowsByPlayer, rowsByGame, teamRowsByGame,
+    ds, mode, gamesById, rowsByPlayer, rowsByGame, teamRowsByGame, crestBySeasonTeam, crestByTeam,
     teamsById: new Map(ds.teams.map((t) => [t.id, t])),
     playersById: new Map(ds.players.map((p) => [p.id, p])),
   };

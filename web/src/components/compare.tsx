@@ -1,12 +1,15 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Crown, Plus, Shield, Users, X } from "lucide-react";
 import { SearchSelect, type Option } from "./pickers";
-import { Avatar, InfoTip, Segmented, TeamMark } from "./ui";
+import { CrestBox, CrestLayer } from "./Crest";
+import { InfoTip, Segmented } from "./ui";
 import { signed } from "../lib/format";
 
 export interface CmpEntity {
   id: number; name: string; color: string; sub?: string; games: number; minutesPerGame?: number | null;
   kind: "player" | "team"; meta?: string;
+  /** equipo cuyo escudo se muestra (el del jugador en el período comparado, o el propio equipo) */
+  crestTeamId?: number | null;
 }
 
 export interface CmpRow {
@@ -38,12 +41,13 @@ export function CompareSlots({ entities, onRemove, options, onAdd, max = 4, plac
         <div key={e.id} className="card relative overflow-hidden p-4">
           <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: e.color }} />
           <button className="btn btn-ghost btn-sm btn-icon absolute right-2 top-3" onClick={() => onRemove(e.id)} aria-label={`Quitar ${e.name}`}><X size={15} /></button>
-          <Link to={e.kind === "player" ? `/jugadores/${e.id}` : `/equipos/${e.id}`} className="group flex items-center gap-3 pr-8">
-            {e.kind === "player" ? <Avatar name={e.name} size={44} tone={e.color} /> : <TeamMark name={e.name} size={44} />}
-            <span className="min-w-0">
-              <span className="block truncate font-semibold group-hover:text-accent-text">{e.name}</span>
-              <span className="block truncate text-xs text-muted">{e.sub}</span>
-            </span>
+          <Link to={e.kind === "player" ? `/jugadores/${e.id}` : `/equipos/${e.id}`} className="group -mx-4 -mt-1 block pr-8">
+            <CrestBox teamId={e.crestTeamId} size="card">
+              <span className="block py-2 pl-16 pr-2">
+                <span className="block truncate font-semibold group-hover:text-accent-text">{e.name}</span>
+                <span className="block truncate text-xs text-muted">{e.sub}</span>
+              </span>
+            </CrestBox>
           </Link>
           <div className="mt-3 flex gap-4 border-t border-line pt-3 text-xs">
             <span><span className="num block text-base font-bold">{e.games}</span><span className="text-muted">PJ</span></span>
@@ -107,8 +111,9 @@ export function ComparisonTable({ entities, rows, highlight }: { entities: CmpEn
           <tr>
             <th className="sticky left-0 z-10 border-b border-line bg-surface-2 px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted">Estadística</th>
             {entities.map((e) => (
-              <th key={e.id} className="border-b border-line bg-surface-2 px-3 py-2.5 text-right text-xs font-semibold">
-                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: e.color }} /><span className="max-w-[140px] truncate">{e.name}</span></span>
+              <th key={e.id} className="relative overflow-hidden border-b border-line bg-surface-2 px-3 py-2.5 text-right text-xs font-semibold">
+                <CrestLayer teamId={e.crestTeamId} />
+                <span className="crest-content inline-flex items-center gap-1.5 pl-8"><span className="h-2 w-2 rounded-full" style={{ background: e.color }} /><span className="max-w-[140px] truncate">{e.name}</span></span>
               </th>
             ))}
           </tr>

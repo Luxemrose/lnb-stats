@@ -11,6 +11,7 @@ import { COUNT_LABELS, f1, pct } from "../lib/format";
 import { METRICS, metricValue, type Metric, type View } from "../lib/leaders";
 import { COUNT_KEYS, rollingMean } from "../lib/stats";
 import { chartLabel, chartValue, type ChartKey } from "./PlayerDetail";
+import { contextTeam } from "./Players";
 
 const DEFAULT_STATS = ["pts", "reb", "ast", "stl", "blk", "tov", "eff", "min", "fg_pct", "fg3_pct", "ft_pct", "ts_pct"];
 const LOWER_BETTER = new Set(["tov", "pf"]);
@@ -43,8 +44,8 @@ export default function Compare() {
   const tname = (id: number | null) => (id ? sd.db.teamsById.get(id)!.name : "");
   const chosen = ids.map((id) => summaries.find((s) => s.playerId === id)).filter((s): s is PlayerSummary => !!s);
   const entities: CmpEntity[] = chosen.map((s, i) => ({
-    id: s.playerId, name: s.name, color: colors.series[i], sub: tname(s.currentTeamId), games: s.agg.games,
-    minutesPerGame: s.agg.minutesPerGame, kind: "player",
+    id: s.playerId, name: s.name, color: colors.series[i], sub: tname(contextTeam(s)), games: s.agg.games,
+    minutesPerGame: s.agg.minutesPerGame, kind: "player", crestTeamId: contextTeam(s),
   }));
   const metrics = METRICS.filter((m) => stats.includes(m.id));
   const valueOf = (s: PlayerSummary, m: Metric) => (m.kind === "minutes" ? (view === "total" ? s.agg.minutesTotal : s.agg.minutesPerGame) : metricValue(s, m, view));

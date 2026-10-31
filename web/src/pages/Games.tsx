@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarDays, List, Table2, X } from "lucide-react";
+import { CrestCell } from "../components/Crest";
 import { GameRow } from "../components/GameRow";
 import { Card, DataTable, Field, FilterBar, PageHeader, Segmented, EmptyState } from "../components/ui";
 import { useSeason } from "../lib/data";
@@ -90,10 +91,10 @@ export default function Games() {
             columns={[
               { key: "date", label: "Fecha", align: "left", value: (g) => g.date, render: (g) => <Link className="link font-medium" to={`/partidos/${g.id}`}>{fdate(g.date)}</Link> },
               { key: "time", label: "Hora", align: "left", value: (g) => g.time },
-              { key: "home", label: "Local", align: "left", value: (g) => tname(g.homeTeamId), render: (g) => <Link className="link" to={`/equipos/${g.homeTeamId}`}>{tname(g.homeTeamId)}</Link> },
+              { key: "home", label: "Local", align: "left", value: (g) => tname(g.homeTeamId), render: (g) => <CrestCell teamId={g.homeTeamId}><Link className="link block pl-7" to={`/equipos/${g.homeTeamId}`}>{tname(g.homeTeamId)}</Link></CrestCell> },
               { key: "score", label: "Resultado", align: "left", value: (g) => (g.homeScore === null ? null : `${g.homeScore} - ${g.awayScore}`),
                 render: (g) => (g.homeScore === null ? <span className="text-muted">—</span> : <Link className="link font-bold" to={`/partidos/${g.id}`}>{g.homeScore} - {g.awayScore}</Link>) },
-              { key: "away", label: "Visitante", align: "left", value: (g) => tname(g.awayTeamId), render: (g) => <Link className="link" to={`/equipos/${g.awayTeamId}`}>{tname(g.awayTeamId)}</Link> },
+              { key: "away", label: "Visitante", align: "left", value: (g) => tname(g.awayTeamId), render: (g) => <CrestCell teamId={g.awayTeamId}><Link className="link block pl-7" to={`/equipos/${g.awayTeamId}`}>{tname(g.awayTeamId)}</Link></CrestCell> },
               { key: "venue", label: "Estadio", align: "left", value: (g) => g.venue },
               { key: "status", label: "Estado", align: "left", value: (g) => STATUS[g.status] },
               { key: "detail", label: "Datos", align: "left", value: (g) => DETAIL[g.detailLevel] },

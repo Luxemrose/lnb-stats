@@ -40,6 +40,41 @@ def _save(conn, rec, sync_id, counts, ref) -> None:
         resolve_errors(conn, ref)
 
 
+def sync_crests(conn, fetcher: PoliteFetcher, season: str, fixture: list[FixtureGame], sync_id: int, out_dir: Path) -> None:
+    """Registra el equipo de cada temporada (idEquipo de la Liga) y su escudo oficial (se descarga una vez)."""
+    from .crests import crest_filename, ensure_crest
+    from .store import get_or_create_season, get_or_create_team, now_iso
+    season_id = get_or_create_season(conn, season)
+    teams = {}
+    for fx in fixture:
+        for t in (fx.home, fx.away):
+            teams.setdefault((t.club_id, t.team_id), t)
+    nuevos = 0
+    for (club, team_sid), t in sorted(teams.items()):
+        tid = get_or_create_team(conn, t.name, club)
+        prev = conn.execute("SELECT crest_file FROM team_seasons WHERE season_id=? AND team_id=?", (season_id, tid)).fetchone()
+        try:
+            had = (out_dir / crest_filename(club, team_sid)).exists()
+            file, err = ensure_crest(fetcher, out_dir, club, team_sid, t.crest_src, t.crest_alt, t.name)
+            nuevos += int(file is not None and not had)
+        except SourceBlocked:
+            raise
+        except Exception as e:  # noqa: BLE001 — sin escudo la app usa un reemplazo discreto
+            file, err = None, f"{type(e).__name__}: {e}"
+        if err:
+            log_error(conn, sync_id, "escudo", f"escudo {t.name}", err)
+        with conn:
+            conn.execute(
+                "INSERT INTO team_seasons(season_id, team_id, source_team_id, crest_source, crest_file, crest_error, updated_at)"
+                " VALUES (?,?,?,?,?,?,?) ON CONFLICT(season_id, team_id) DO UPDATE SET source_team_id=excluded.source_team_id,"
+                " crest_source=excluded.crest_source, crest_file=COALESCE(excluded.crest_file, crest_file),"
+                " crest_error=excluded.crest_error, updated_at=excluded.updated_at",
+                (season_id, tid, team_sid, t.crest_src, file or (prev["crest_file"] if prev else None), err, now_iso()))
+            if file:
+                resolve_errors(conn, f"escudo {t.name}")
+    print(f"  escudos: {len(teams)} equipos, {nuevos} descargados ahora")
+
+
 def sync_standings(conn, fetcher: PoliteFetcher, season: str, sync_id: int) -> None:
     """Tabla oficial: la portada indica las fases (select-fase); cada fase tiene grupos (API JSON)."""
     import json
@@ -63,7 +98,7 @@ def sync_standings(conn, fetcher: PoliteFetcher, season: str, sync_id: int) -> N
 
 
 def run_sync(conn, raw_dir: Path, season: str, max_games: int = 80, recheck_days: int = 4,
-             today: date | None = None, standings: bool = True) -> dict:
+             today: date | None = None, standings: bool = True, crest_dir: Path | None = None) -> dict:
     today = today or datetime.now(timezone.utc).astimezone().date()
     sync_id = start_sync(conn, "laliganacional", f"temporada {season}")
     counts = {"new": 0, "updated": 0, "unchanged": 0, "rejected": 0, "skipped": 0}
@@ -75,6 +110,8 @@ def run_sync(conn, raw_dir: Path, season: str, max_games: int = 80, recheck_days
         for a, b in daterange_chunks(start, end):
             fixture += parse_fixture(fetcher.get(fixture_url(a, b), save_as=f"fixture_{a}_{b}"))
         print(f"Fixture {season}: {len(fixture)} partidos entre {start} y {end}")
+        if crest_dir is not None and fixture:
+            sync_crests(conn, fetcher, season, fixture, sync_id, crest_dir)
         if not fixture:
             log_error(conn, sync_id, "parse", "fixture", "el fixture no devolvió partidos")
 

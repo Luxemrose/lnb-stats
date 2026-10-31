@@ -4,9 +4,11 @@ import { Activity, ArrowLeftRight, BarChart3, Gauge, LineChart as LineIcon, List
 import { ChartCard, LinesChart, useThemeColors } from "../components/charts";
 import { PeriodPicker, SearchSelect, defaultPeriod, describePeriod, toPeriod } from "../components/pickers";
 import {
-  Avatar, Badge, Card, DataTable, EmptyState, Field, Notice, PageHeader, PctBar, Segmented, StatTile, Tabs, useUrlTab, InfoTip,
+  Avatar, Badge, Card, DataTable, EmptyState, Field, Notice, PageHeader, PctBar, Segmented, StatTile, Tabs, useUrlTab, InfoTip, TeamMark,
 } from "../components/ui";
+import { CrestBox, CrestCell } from "../components/Crest";
 import { useData, useSeason, type DatedRow } from "../lib/data";
+import { contextTeam } from "./Players";
 import { playerRows, playerSummaries } from "../lib/derive";
 import { COUNT_LABELS, PCT_LABELS, f0, f1, fdate, mmss, pct, signed } from "../lib/format";
 import { GLOSSARY } from "../lib/glossary";
@@ -65,9 +67,10 @@ export default function PlayerDetail() {
 
   return (
     <div className="space-y-6">
+      <CrestBox teamId={current?.teamId} size="hero" className="-mx-3 -mt-2 rounded-2xl px-3 pt-2">
       <PageHeader back={{ to: "/jugadores", label: "Jugadores" }}
         leading={<Avatar name={player.name} size={64} tone="accent" />}
-        eyebrow={current ? <Link to={`/equipos/${current.teamId}`} className="hover:text-accent-text">{team(current.teamId).name}</Link> : "Sin equipo en la temporada"}
+        eyebrow={current ? <Link to={`/equipos/${current.teamId}`} className="inline-flex items-center gap-1.5 hover:text-accent-text"><TeamMark teamId={current.teamId} name={team(current.teamId).name} size={16} />{team(current.teamId).name}</Link> : "Sin equipo en la temporada"}
         title={player.name}
         subtitle={<span className="flex flex-wrap items-center gap-2">
           {current?.jersey && <Badge>#{current.jersey}</Badge>}
@@ -83,6 +86,7 @@ export default function PlayerDetail() {
           </label>
           <Link className="btn btn-primary" to={`/comparar?ids=${pid}`}><ArrowLeftRight size={15} /> Comparar</Link>
         </>} />
+      </CrestBox>
 
       {player.identity === "name" && (
         <Notice>La fuente no aportó un identificador oficial para este jugador: se lo reconoce por su nombre. Si aparece con distintas grafías puede figurar duplicado.</Notice>
@@ -155,8 +159,9 @@ function SummaryTab({ rows, agg, team, onMore }: { rows: DatedRow[]; agg: Aggreg
                 const res = result(r);
                 return (
                   <tr key={r.gameId} className="border-t border-line">
-                    <td className="py-2.5">
-                      <Link to={`/partidos/${r.gameId}`} className="group flex items-center gap-2.5">
+                    <td className="relative py-2.5">
+                      <CrestCell teamId={r.game.homeTeamId === r.teamId ? r.game.awayTeamId : r.game.homeTeamId}>
+                      <Link to={`/partidos/${r.gameId}`} className="group flex items-center gap-2.5 pl-7">
                         {res && <span className={`grid h-6 w-6 place-items-center rounded-md text-[11px] font-bold ${res.win ? "bg-good-soft text-good" : "bg-bad-soft text-bad"}`}>{res.win ? "G" : "P"}</span>}
                         <span className="min-w-0">
                           <span className="block truncate font-medium group-hover:text-accent-text">{r.game.homeTeamId === r.teamId ? "vs" : "@"} {oppName(r, team)}</span>
@@ -166,6 +171,7 @@ function SummaryTab({ rows, agg, team, onMore }: { rows: DatedRow[]; agg: Aggreg
                           </span>
                         </span>
                       </Link>
+                      </CrestCell>
                     </td>
                     <td className="hidden text-right text-ink-2 sm:table-cell">{mmss(r.minutes_sec)}</td>
                     <td className="hidden text-right font-semibold sm:table-cell">{r.pts ?? "s/d"}</td>
@@ -236,7 +242,8 @@ function StatsTab({ rows, agg, periodText, name, team }: { rows: DatedRow[]; agg
         <DataTable rows={[...rows].reverse()} rowKey={(r) => r.gameId} dense csvName={`${name}-partidos.csv`.replace(/[^\w.-]+/g, "_")} maxHeight={560}
           columns={[
             { key: "date", label: "Fecha", align: "left", sticky: true, value: (r) => r.date, render: (r) => <Link className="link font-medium" to={`/partidos/${r.gameId}`}>{fdate(r.date)}</Link> },
-            { key: "opp", label: "Rival", align: "left", value: (r) => `${r.game.homeTeamId === r.teamId ? "vs" : "@"} ${oppName(r, team)}` },
+            { key: "opp", label: "Rival", align: "left", value: (r) => `${r.game.homeTeamId === r.teamId ? "vs" : "@"} ${oppName(r, team)}`,
+              render: (r) => <CrestCell teamId={r.game.homeTeamId === r.teamId ? r.game.awayTeamId : r.game.homeTeamId}><span className="block pl-7">{r.game.homeTeamId === r.teamId ? "vs" : "@"} {oppName(r, team)}</span></CrestCell> },
             { key: "res", label: "Res.", align: "left", value: (r) => { const x = result(r); return x ? `${x.win ? "G" : "P"} ${x.text}` : null; },
               render: (r) => { const x = result(r); return x ? <span className={x.win ? "text-good" : "text-bad"}>{x.win ? "G" : "P"} <span className="text-ink-2">{x.text}</span></span> : "—"; } },
             { key: "tit", label: "Tit.", title: "Titular", value: (r) => (r.starter === null ? null : r.starter ? "Sí" : "No") },
@@ -431,10 +438,13 @@ function ComparisonsTab({ pid, league, periodText }: {
             .filter((s) => s.playerId !== pid && s.agg.games >= league.minGames && s.agg.stats.pts.perGame !== null)
             .sort((a, b) => Math.abs((a.agg.stats.pts.perGame as number) - (me.agg.stats.pts.perGame ?? 0)) - Math.abs((b.agg.stats.pts.perGame as number) - (me.agg.stats.pts.perGame ?? 0)))
             .slice(0, 4).map((s) => (
-              <Link key={s.playerId} to={`/comparar?ids=${pid},${s.playerId}`} className="card-hover flex items-center gap-3 rounded-xl border border-line p-2.5">
-                <Avatar name={s.name} size={30} />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">{s.name}</span>
-                <span className="num text-xs text-muted">{f1(s.agg.stats.pts.perGame)} PTS</span>
+              <Link key={s.playerId} to={`/comparar?ids=${pid},${s.playerId}`} className="card-hover block overflow-hidden rounded-xl border border-line">
+                <CrestBox teamId={contextTeam(s)}>
+                  <span className="flex items-center gap-3 p-2.5 pl-10">
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{s.name}</span>
+                    <span className="num text-xs text-muted">{f1(s.agg.stats.pts.perGame)} PTS</span>
+                  </span>
+                </CrestBox>
               </Link>
             ))}
         </div>

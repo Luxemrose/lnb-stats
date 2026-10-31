@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CheckCircle2, ListOrdered } from "lucide-react";
-import { Card, DataTable, Notice, Origin, ResultPill, TeamMark, type Column } from "./ui";
+import { CrestCell } from "./Crest";
+import { Card, DataTable, Notice, Origin, ResultPill, type Column } from "./ui";
 import type { SeasonData } from "../lib/data";
 import { f0, fdatetime, pct, signed } from "../lib/format";
 import { ratio, standings, type TeamRecord } from "../lib/stats";
@@ -13,10 +14,9 @@ interface Row {
 function teamCell(sd: SeasonData, id: number, compact: boolean) {
   const t = sd.db.teamsById.get(id)!;
   return (
-    <Link to={`/equipos/${id}`} className="link flex items-center gap-2.5 font-medium">
-      <TeamMark name={t.name} size={compact ? 24 : 28} />
-      <span className="truncate">{t.name}</span>
-    </Link>
+    <CrestCell teamId={id}>
+      <Link to={`/equipos/${id}`} className={`link block truncate font-semibold ${compact ? "pl-7" : "pl-9"}`}>{t.name}</Link>
+    </CrestCell>
   );
 }
 
@@ -79,7 +79,7 @@ export function CalculatedTable({ rows, team }: { rows: TeamRecord[]; team: (id:
     <DataTable rows={rows} rowKey={(r) => r.teamId} dense pageSize={0} csvName="record-equipos.csv" initialSort="pct"
       columns={[
         { key: "team", label: "Equipo", align: "left", sticky: true, value: (r) => team(r.teamId).name,
-          render: (r) => <Link className="link flex items-center gap-2.5 font-medium" to={`/equipos/${r.teamId}`}><TeamMark name={team(r.teamId).name} size={26} />{team(r.teamId).name}</Link> },
+          render: (r) => <CrestCell teamId={r.teamId}><Link className="link block pl-8 font-semibold" to={`/equipos/${r.teamId}`}>{team(r.teamId).name}</Link></CrestCell> },
         { key: "pj", label: "PJ", title: "Partidos jugados", value: (r) => r.games },
         { key: "pct", label: "%V", title: "Porcentaje de victorias", value: (r) => r.winPct, render: (r) => pct(r.winPct), highlight: "max" },
         { key: "local", label: "Local", title: "Ganados-perdidos de local", value: (r) => r.homeW - r.homeL, render: (r) => `${r.homeW}-${r.homeL}` },

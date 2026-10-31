@@ -47,7 +47,7 @@ export default function TeamDetail() {
 
   return (
     <div className="space-y-6">
-      <PageHeader back={{ to: "/equipos", label: "Equipos" }} leading={<TeamMark name={team.name} size={64} />}
+      <PageHeader back={{ to: "/equipos", label: "Equipos" }} leading={<TeamMark teamId={tid} name={team.name} size={72} />}
         eyebrow={official ? <span className="text-accent-text">{official.position}.º en la tabla oficial · {official.phase}</span> : `Temporada ${sd.season.code}`}
         title={team.name}
         subtitle={<span className="flex flex-wrap items-center gap-3">
@@ -159,7 +159,7 @@ export default function TeamDetail() {
             toolbar={<Segmented size="sm" ariaLabel="Tipo de valor" value={rosterView} onChange={setRosterView}
               options={[{ value: "perGame", label: "Por partido" }, { value: "total", label: "Totales" }, { value: "per40", label: "Por 40'" }]} />}
             columns={[
-              playerNameColumn(() => team.name),
+              playerNameColumn(() => team.name, tid),
               { key: "pj", label: "PJ", value: (s) => s.agg.games, highlight: "max" },
               { key: "min", label: "MIN", value: (s) => (rosterView === "total" ? s.agg.minutesTotal : s.agg.minutesPerGame), render: (s) => f1(rosterView === "total" ? s.agg.minutesTotal : s.agg.minutesPerGame) },
               ...statColumns(rosterView, false),

@@ -4,7 +4,9 @@ import { ArrowLeftRight, ArrowUpRight, CalendarDays, Clapperboard, Crown, Flame,
 import { ChartCard, LinesChart, useThemeColors } from "../components/charts";
 import { GameRow } from "../components/GameRow";
 import { StandingsCard } from "../components/Standings";
-import { Avatar, Card, Notice, PageHeader, Segmented, StatTile } from "../components/ui";
+import { CrestBox } from "../components/Crest";
+import { Card, Notice, PageHeader, Segmented, StatTile } from "../components/ui";
+import { contextTeam } from "./Players";
 import { useSeason } from "../lib/data";
 import { playerSummaries, weeklyLeague, type PlayerSummary } from "../lib/derive";
 import { f1, fdatetime, pct } from "../lib/format";
@@ -128,20 +130,27 @@ function LeaderCard({ metric, summaries, minGames, teamName }: {
       </div>
       {first ? (
         <>
-          <Link to={`/jugadores/${first.playerId}`} className="group flex items-center gap-3">
-            <Avatar name={first.name} size={40} tone="accent" />
+          <Link to={`/jugadores/${first.playerId}`} className="group block">
+            <CrestBox teamId={contextTeam(first)} size="card" className="-mx-1 rounded-lg">
+            <span className="flex items-center gap-3 py-1.5 pl-12 pr-1">
             <span className="min-w-0 flex-1">
               <span className="line-clamp-2 text-sm font-semibold leading-tight group-hover:text-accent-text">{first.name}</span>
-              <span className="mt-0.5 block truncate text-xs text-muted">{first.currentTeamId ? teamName(first.currentTeamId) : ""} · {first.agg.games} PJ</span>
+              <span className="mt-0.5 block truncate text-xs text-muted">{contextTeam(first) ? teamName(contextTeam(first)!) : ""} · {first.agg.games} PJ</span>
             </span>
             <span className="num shrink-0 text-2xl font-bold text-accent-text">{fmt(first)}</span>
+            </span>
+            </CrestBox>
           </Link>
-          <ol className="mt-3 space-y-1.5 border-t border-line pt-2.5">
+          <ol className="mt-3 space-y-1 border-t border-line pt-2.5">
             {rest.map((s, i) => (
-              <li key={s.playerId} className="flex items-center gap-2 text-[13px]">
-                <span className="num w-3 text-xs text-muted">{i + 2}</span>
-                <Link to={`/jugadores/${s.playerId}`} className="link min-w-0 flex-1 truncate">{s.name}</Link>
-                <span className="num font-semibold text-ink-2">{fmt(s)}</span>
+              <li key={s.playerId}>
+                <CrestBox teamId={contextTeam(s)} className="-mx-1 rounded-md">
+                  <span className="flex items-center gap-2 py-0.5 pl-1 pr-1 text-[13px]">
+                    <span className="num w-5 text-right text-xs text-muted">{i + 2}</span>
+                    <Link to={`/jugadores/${s.playerId}`} className="link min-w-0 flex-1 truncate pl-2">{s.name}</Link>
+                    <span className="num font-semibold text-ink-2">{fmt(s)}</span>
+                  </span>
+                </CrestBox>
               </li>
             ))}
           </ol>

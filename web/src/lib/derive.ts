@@ -7,6 +7,14 @@ export interface PlayerSummary {
   jersey: string | null; agg: Aggregate; rows: DatedRow[];
 }
 
+/**
+ * Equipo del jugador en el contexto consultado (para su escudo): el de su último partido dentro del período;
+ * si no jugó en el período, el de su último plantel en la temporada. Usa ids, nunca nombres.
+ */
+export function contextTeam(s: Pick<PlayerSummary, "rows" | "currentTeamId">): number | null {
+  return s.rows.length ? s.rows[s.rows.length - 1].teamId : s.currentTeamId;
+}
+
 /** Filas disputadas por un jugador en la temporada, opcionalmente filtradas por período. */
 export function playerRows(sd: SeasonData, playerId: number, period: Period = {}): DatedRow[] {
   const rows = sd.rowsForPlayer(playerId).filter((r) => !r.dnp);

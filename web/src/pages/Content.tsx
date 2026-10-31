@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { BarsChart, ChartCard, LinesChart, useThemeColors } from "../components/charts";
 import { MultiPicker, PeriodPicker, defaultPeriod, describePeriod, toPeriod } from "../components/pickers";
 import { Clapperboard, Copy, Check, Download, FileText, Sparkles } from "lucide-react";
-import { Avatar, Card, EmptyState, Field, FilterBar, Notice, PageHeader, Segmented, TeamMark } from "../components/ui";
+import { CrestBox } from "../components/Crest";
+import { Card, EmptyState, Field, FilterBar, Notice, PageHeader, Segmented } from "../components/ui";
 import { useSeason } from "../lib/data";
 import { playerRows, playerSummaries, teamPeriodData } from "../lib/derive";
 import { COUNT_LABELS, downloadText, f1, fdate, fdatetime, toCsv } from "../lib/format";
@@ -12,6 +13,7 @@ const KEYS: CountKey[] = ["pts", "reb", "ast", "stl", "blk", "tov", "eff"];
 
 interface Subject {
   id: number; name: string; color: string; games: number; value: number | null;
+  teamId: number | null; // equipo del escudo: el del jugador en el período, o el propio equipo
   before: { games: number; value: number | null } | null; after: { games: number; value: number | null } | null;
   series: { label: string; date: string; value: number | null }[];
 }
@@ -49,6 +51,7 @@ export default function Content() {
       const af = split ? aggregate(rows.filter((r) => r.date >= split)) : null;
       return {
         id, name: sd.db.playersById.get(id)?.name ?? String(id), color: colors.series[i], games: a.games, value: a.stats[key].perGame,
+        teamId: rows.length ? rows[rows.length - 1].teamId : null,
         before: b && { games: b.games, value: b.stats[key].perGame }, after: af && { games: af.games, value: af.stats[key].perGame },
         series: rows.map((r) => ({ date: r.date, label: fdate(r.date).slice(0, 5), value: r[key] })),
       };
@@ -60,7 +63,7 @@ export default function Content() {
       return { games: ls.length, value: v.length === ls.length && v.length ? v.reduce((p, c) => p + c, 0) / v.length : null };
     };
     return {
-      id, name: tname(id), color: colors.series[i], games: lines.length, value: avg(lines).value,
+      id, name: tname(id), color: colors.series[i], games: lines.length, value: avg(lines).value, teamId: id,
       before: split ? avg(lines.filter((l) => l.date < split)) : null, after: split ? avg(lines.filter((l) => l.date >= split)) : null,
       series: lines.map((l) => ({ date: l.date, label: fdate(l.date).slice(0, 5), value: l.stats![key] })),
     };
@@ -128,11 +131,10 @@ export default function Content() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {subjects.map((s) => (
               <div key={s.id} className="card relative overflow-hidden p-4">
-                <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: s.color }} />
-                <div className="flex items-center gap-2.5">
-                  {kind === "players" ? <Avatar name={s.name} size={32} tone={s.color} /> : <TeamMark name={s.name} size={32} />}
-                  <div className="min-w-0 truncate text-sm font-semibold">{s.name}</div>
-                </div>
+                <span aria-hidden className="absolute inset-x-0 top-0 z-[2] h-1" style={{ background: s.color }} />
+                <CrestBox teamId={s.teamId} className="-mx-4 -mt-1">
+                  <div className="min-w-0 truncate py-2 pl-14 pr-4 text-sm font-semibold">{s.name}</div>
+                </CrestBox>
                 <div className="num mt-3 text-4xl font-extrabold tracking-tight">{f1(s.value)}</div>
                 <div className="text-xs text-ink-2">{label.toLowerCase()} por partido · {s.games} PJ</div>
                 {s.before && s.after && (

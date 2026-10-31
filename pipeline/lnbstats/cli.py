@@ -31,6 +31,7 @@ REAL_DB = DATA / "lnb.sqlite"
 DEMO_DB = DATA / "demo.sqlite"
 RAW_DIR = DATA / "raw"
 WEB_DATA = ROOT / "web" / "public" / "data"
+CREST_DIR = ROOT / "web" / "public" / "escudos"
 
 
 def export_real(conn, a) -> None:
@@ -68,7 +69,7 @@ def cmd_sync(a):
     a.season = a.season or season_code_for(date.today())
     conn = connect(a.db)
     r = run_sync(conn, RAW_DIR, a.season, max_games=a.max_games, recheck_days=a.recheck_days,
-                 standings=not a.no_standings)
+                 standings=not a.no_standings, crest_dir=CREST_DIR)
     export_real(conn, a)
     return 0 if r["status"] in ("success", "partial") else 1
 

@@ -21,6 +21,7 @@ Fuente: https://www.laliganacional.com.ar/laliga/ · **Verificado contra el siti
 | Planilla del partido | `GET /laliga/partido/{token}/{local-vs-visitante}` | Dos tablas; cada fila de jugador trae un **JSON** en el atributo `onclick` (`EstadisticasComponente({...})`) con todas sus estadísticas; fila final "Totales" del equipo |
 | Tabla de posiciones oficial | Fases en la portada (`select-fase`), grupos en `GET /api/clasificacion/{faseId}/grupos` (JSON), tabla en `GET /laliga?handler=Clasificacion&faseId=..&grupoId=..` | Tabla HTML: Pos, Equipo, PJ, PG, PP, PF, PC, PTOS, %VICT |
 | Plantel | `/laliga/equipo/{idClub}/{idEquipo}/{slug}/roster` | Lista de nombres con enlace al jugador (sin posición) |
+| Escudo del equipo | `GET /escudos/{idClub}/{idEquipo}` (referenciado en cada fila del fixture con `alt` = nombre del equipo) | JPEG ~200×200, fondo liso |
 | Ficha de jugador | `/laliga/jugador/{idClub}/{idEquipo}/{idJugador}/{slug}` | Datos cargados aparte; sin posición |
 
 Datos por jugador y partido en la planilla: minutos, puntos, dobles, triples y libres (convertidos/intentados),
