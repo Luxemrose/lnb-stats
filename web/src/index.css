@@ -34,7 +34,7 @@
   --axis: #3a4456;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.18);
   --s1: #4389ff; --s2: #e8691e; --s3: #1e9e77; --s4: #b38a12;
-  --crest-opacity: 0.3;
+  --crest-opacity: 0.62;
 }
 :root[data-theme="light"] {
   color-scheme: light;
@@ -63,7 +63,7 @@
   --axis: #c9d0db;
   --shadow: 0 1px 2px rgba(16, 20, 29, 0.06), 0 8px 24px rgba(16, 20, 29, 0.06);
   --s1: #2a6fdb; --s2: #d9631b; --s3: #168a68; --s4: #b08a0c;
-  --crest-opacity: 0.2;
+  --crest-opacity: 0.42;
 }
 
 @theme inline {
@@ -190,13 +190,16 @@ body {
   transform: translateY(-50%);
   object-fit: contain;
   opacity: var(--crest-opacity);
-  -webkit-mask-image: linear-gradient(to right, #000 0%, rgba(0, 0, 0, 0.75) 35%, rgba(0, 0, 0, 0.25) 70%, transparent 100%);
-          mask-image: linear-gradient(to right, #000 0%, rgba(0, 0, 0, 0.75) 35%, rgba(0, 0, 0, 0.25) 70%, transparent 100%);
+  /* Izquierda casi plena; el desvanecimiento se concentra en la mitad derecha del escudo. */
+  -webkit-mask-image: linear-gradient(to right, #000 0%, #000 38%, rgba(0, 0, 0, 0.55) 62%, rgba(0, 0, 0, 0.15) 84%, transparent 100%);
+          mask-image: linear-gradient(to right, #000 0%, #000 38%, rgba(0, 0, 0, 0.55) 62%, rgba(0, 0, 0, 0.15) 84%, transparent 100%);
   user-select: none;
 }
-.crest-card img { height: 135%; left: -10px; opacity: calc(var(--crest-opacity) * 0.85); }
-.crest-hero img { height: 170%; left: -24px; opacity: calc(var(--crest-opacity) * 0.6); }
+.crest-card img { height: 135%; left: -10px; opacity: calc(var(--crest-opacity) * 0.9); }
+.crest-hero img { height: 170%; left: -24px; opacity: calc(var(--crest-opacity) * 0.55); }
 .crest-content { position: relative; z-index: 1; }
+/* Halo muy suave detrás del texto para que siga legible sobre el escudo más intenso. */
+.crest-content :where(a, span, div) { text-shadow: 0 0 6px var(--surface), 0 0 2px var(--surface); }
 
 .recharts-wrapper:focus, .recharts-surface:focus { outline: none; }
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }

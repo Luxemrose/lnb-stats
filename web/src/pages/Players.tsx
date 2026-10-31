@@ -52,7 +52,7 @@ export function playerNameColumn(teamName: (id: number | null) => string, fixedT
       const tid = fixedTeam ?? contextTeam(s);
       return (
         <CrestCell teamId={tid}>
-          <Link to={`/jugadores/${s.playerId}`} className="group block min-w-[170px] pl-7">
+          <Link to={`/jugadores/${s.playerId}`} className="group block min-w-[180px] pl-10">
             <span className="block truncate font-medium group-hover:text-accent-text">{s.name}</span>
             <span className="block truncate text-[11px] text-muted">{teamName(tid)}{s.jersey ? ` · #${s.jersey}` : ""}</span>
           </Link>
