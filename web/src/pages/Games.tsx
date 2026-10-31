@@ -37,10 +37,19 @@ export default function Games() {
   const teams = sd.teamIds.map((id) => sd.db.teamsById.get(id)!).sort((a, b) => a.name.localeCompare(b.name));
   const any = from || to || home !== "" || away !== "";
   // Lista: próximos en orden cronológico, jugados del más reciente al más viejo.
-  const listGames = [...filtered].sort((a, b) => state === "next" ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date) || b.id - a.id);
+  // Lista: primero los próximos (del más cercano al más lejano, por fecha y horario);
+  // después los jugados (del más reciente al más viejo; dentro del día, por horario).
+  const when = (g: Game) => `${g.date} ${g.time ?? "99:99"}`;
+  const upcoming = filtered.filter((g) => g.homeScore === null).sort((a, b) => when(a).localeCompare(when(b)) || a.id - b.id);
+  const played = filtered.filter((g) => g.homeScore !== null).sort((a, b) => b.date.localeCompare(a.date) || when(a).localeCompare(when(b)) || a.id - b.id);
+  const listGames = [...upcoming, ...played];
   const shown = listGames.slice(0, limit);
-  const byDay = new Map<string, Game[]>();
-  for (const g of shown) byDay.set(g.date, [...(byDay.get(g.date) ?? []), g]);
+  const byDay = new Map<string, { section: "next" | "played"; games: Game[] }>();
+  for (const g of shown) {
+    const section = g.homeScore === null ? "next" : "played";
+    const k = `${section}|${g.date}`;
+    byDay.set(k, { section, games: [...(byDay.get(k)?.games ?? []), g] });
+  }
   const sel = (v: number | "", set: (v: number | "") => void) => (
     <select className="input w-48" value={v} onChange={(e) => set(e.target.value ? Number(e.target.value) : "")}>
       <option value="">Todos</option>
@@ -72,17 +81,28 @@ export default function Games() {
         </EmptyState>
       ) : mode === "list" ? (
         <div className="space-y-4">
-          {[...byDay.entries()].map(([day, gs]) => (
-            <Card key={day} padded={false}>
-              <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
-                <span className="text-sm font-semibold">{dayLabel(day)}</span>
-                <span className="text-xs text-muted">{gs.length} {gs.length === 1 ? "partido" : "partidos"}</span>
+          {[...byDay.entries()].map(([k, { section, games: gs }], idx, arr) => {
+            const day = k.split("|")[1];
+            const firstOfSection = idx === 0 || arr[idx - 1][1].section !== section;
+            return (
+              <div key={k} className="space-y-3">
+                {firstOfSection && state === "all" && (
+                  <h2 className="flex items-center gap-2 pt-1 text-sm font-semibold text-ink-2">
+                    {section === "next" ? `Próximos (${upcoming.length})` : `Resultados (${played.length})`}
+                  </h2>
+                )}
+                <Card padded={false}>
+                  <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+                    <span className="text-sm font-semibold">{dayLabel(day)}</span>
+                    <span className="text-xs text-muted">{gs.length} {gs.length === 1 ? "partido" : "partidos"}</span>
+                  </div>
+                  <div className="grid divide-y divide-line px-2 py-1 md:grid-cols-2 md:gap-x-4 md:divide-y-0">
+                    {gs.map((g) => <GameRow key={g.id} game={g} teamName={tname} showVenue />)}
+                  </div>
+                </Card>
               </div>
-              <div className="grid divide-y divide-line px-2 py-1 md:grid-cols-2 md:gap-x-4 md:divide-y-0">
-                {gs.map((g) => <GameRow key={g.id} game={g} teamName={tname} showVenue />)}
-              </div>
-            </Card>
-          ))}
+            );
+          })}
           {listGames.length > limit && <button className="btn w-full" onClick={() => setLimit(limit + 40)}>Mostrar más ({listGames.length - limit} restantes)</button>}
         </div>
       ) : (
