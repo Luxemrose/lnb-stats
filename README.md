@@ -16,10 +16,10 @@ pipeline/   Python: obtención, validación, almacenamiento y exportación de da
   tests/      pruebas (pytest)
   templates/  plantillas CSV
 data/       lnb.sql (base real, en git) · lnb.sqlite (se reconstruye) · demo.sqlite · raw/ (respuestas del sitio)
-web/        React + TypeScript + Vite + Tailwind + Recharts
+web/        React + TypeScript + Vite + Tailwind + Recharts + Lucide (tema oscuro por defecto)
   public/data/real.json  ← lo que muestra la web (generado por el pipeline)
   public/data/demo.json  ← datos ficticios
-docs/       diagnóstico, arquitectura, métricas, CSV, actualización
+docs/       diagnóstico, arquitectura, métricas, CSV, actualización, sistema de diseño
 db/         esquema PostgreSQL/Supabase (opcional, para el futuro)
 ```
 

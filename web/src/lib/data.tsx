@@ -24,6 +24,7 @@ interface Ctx {
   setMode: (m: Mode) => void;
   seasonId: number | null;
   setSeasonId: (id: number) => void;
+  reload: () => void;
 }
 
 const DataCtx = createContext<Ctx | null>(null);
@@ -66,6 +67,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [seasonId, setSeasonId] = useState<number | null>(null);
+  const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -80,17 +82,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const withGames = ds.seasons.filter((s) => ds.games.some((g) => g.seasonId === s.id));
         setSeasonId((withGames[0] ?? ds.seasons[0])?.id ?? null);
       })
-      .catch((e) => alive && setError(`No se pudo cargar data/${mode}.json (${e.message}). ¿Ejecutaste el pipeline?`))
+      .catch((e) => alive && setError(`No pudimos cargar las estadísticas (${e.message}). Revisá tu conexión e intentá de nuevo.`))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
-  }, [mode]);
+  }, [mode, nonce]);
 
   const setMode = (m: Mode) => {
     try { localStorage.setItem("lnb-mode", m); } catch { /* sin almacenamiento: sólo para esta sesión */ }
     setModeState(m);
   };
 
-  return <DataCtx.Provider value={{ db, error, loading, mode, setMode, seasonId, setSeasonId }}>{children}</DataCtx.Provider>;
+  return <DataCtx.Provider value={{ db, error, loading, mode, setMode, seasonId, setSeasonId, reload: () => setNonce((n) => n + 1) }}>{children}</DataCtx.Provider>;
 }
 
 export function useData() {

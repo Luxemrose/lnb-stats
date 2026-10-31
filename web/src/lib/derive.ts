@@ -82,3 +82,57 @@ export function opponentLines(sd: SeasonData, teamId: number): TeamGameLine[] {
     return oppLine ?? l;
   });
 }
+
+// ------------------------------------------------------------- equipos por período
+
+export interface TeamPeriodData {
+  lines: TeamGameLine[]; done: TeamGameLine[]; own: Aggregate; opp: Aggregate;
+  wins: number; losses: number; pf: number; pa: number; origin: "oficial" | "calculado" | "mixto" | null;
+}
+
+export function teamPeriodData(sd: SeasonData, teamId: number, period: Period): TeamPeriodData {
+  const all = teamGames(sd, teamId);
+  const done = filterPeriod(all.filter((l) => l.win !== null), period);
+  const ids = new Set(done.map((l) => l.game.id));
+  const lines = all.filter((l) => l.win === null || ids.has(l.game.id));
+  const oppLines = done.map((l) => teamGames(sd, l.opponentId).find((o) => o.game.id === l.game.id)!).filter(Boolean);
+  const origins = new Set(done.filter((l) => l.stats).map((l) => l.statsOrigin));
+  return {
+    lines, done, own: teamAggregate(done), opp: teamAggregate(oppLines),
+    wins: done.filter((l) => l.win).length, losses: done.filter((l) => l.win === false).length,
+    pf: done.reduce((a, l) => a + (l.own ?? 0), 0), pa: done.reduce((a, l) => a + (l.opp ?? 0), 0),
+    origin: origins.size === 0 ? null : origins.size > 1 ? "mixto" : ([...origins][0] as "oficial" | "calculado"),
+  };
+}
+
+// ------------------------------------------------------------- liga por semana
+
+export interface WeekPoint { week: string; label: string; games: number; ptsPerTeam: number | null; fg3Pct: number | null }
+
+/** Semana (lunes) de una fecha ISO. La fuente no publica el número de fecha/jornada, así que se agrupa por semana. */
+export function weekStart(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  const dow = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - dow);
+  return d.toISOString().slice(0, 10);
+}
+
+export function weeklyLeague(sd: SeasonData): WeekPoint[] {
+  const byWeek = new Map<string, Game[]>();
+  for (const g of sd.games.filter(isCompleted)) {
+    const w = weekStart(g.date);
+    byWeek.set(w, [...(byWeek.get(w) ?? []), g]);
+  }
+  return [...byWeek.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([week, games]) => {
+    const pts = games.reduce((a, g) => a + (g.homeScore as number) + (g.awayScore as number), 0);
+    let m = 0, att = 0;
+    for (const g of games) {
+      for (const r of sd.db.rowsByGame.get(g.id) ?? []) {
+        if (r.dnp || r.fg3m === null || r.fg3a === null) continue;
+        m += r.fg3m; att += r.fg3a;
+      }
+    }
+    const [, mm, dd] = week.split("-");
+    return { week, label: `Sem. ${dd}/${mm}`, games: games.length, ptsPerTeam: pts / (games.length * 2), fg3Pct: att ? m / att : null };
+  });
+}

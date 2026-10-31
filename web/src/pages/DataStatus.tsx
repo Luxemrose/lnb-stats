@@ -1,4 +1,5 @@
-import { Card, DataTable, EmptyState, Notice, PageHeader, StatTile } from "../components/ui";
+import { AlertTriangle, Clock, Database, History, Users } from "lucide-react";
+import { Badge, Card, DataTable, EmptyState, Notice, PageHeader, StatTile } from "../components/ui";
 import { useData } from "../lib/data";
 import { fdatetime } from "../lib/format";
 
@@ -15,18 +16,19 @@ export default function DataStatus() {
       <PageHeader title="Estado de los datos" subtitle={`Archivo generado el ${fdatetime(meta.generatedAt)} · ${meta.sourceName}`} />
       {meta.mode === "demo" && <Notice>Estás viendo la base de demostración (datos ficticios).</Notice>}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatTile label="Última actualización exitosa" value={<span className="text-base">{fdatetime(meta.lastSuccessfulSync?.finished_at)}</span>} />
-        <StatTile label="Partidos" value={games.length} sub={`${games.filter((g) => g.detailLevel === "box_score").length} con planilla · ${games.filter((g) => g.detailLevel === "result_only").length} sólo resultado`} />
-        <StatTile label="Jugadores" value={players.length} sub={byName ? `${byName} identificados sólo por nombre` : "todos con id oficial"} />
-        <StatTile label="Errores pendientes" value={openErrors.length} sub="se reintentan con retry-failed" />
+        <StatTile icon={Clock} label="Última actualización exitosa" value={<span className="text-base">{fdatetime(meta.lastSuccessfulSync?.finished_at)}</span>} />
+        <StatTile icon={Database} label="Partidos" value={games.length} sub={`${games.filter((g) => g.detailLevel === "box_score").length} con planilla · ${games.filter((g) => g.detailLevel === "result_only").length} sólo resultado`} />
+        <StatTile icon={Users} label="Jugadores" value={players.length} sub={byName ? `${byName} identificados sólo por nombre` : "todos con id oficial"} />
+        <StatTile icon={AlertTriangle} label="Errores pendientes" value={openErrors.length} sub="se reintentan con retry-failed" />
       </div>
-      <Card title="Historial de actualizaciones">
+      <Card icon={History} title="Historial de actualizaciones">
         <DataTable rows={syncLogs} rowKey={(l) => l.id} dense
           columns={[
             { key: "id", label: "#", value: (l) => l.id },
             { key: "start", label: "Inicio", align: "left", value: (l) => l.started_at, render: (l) => fdatetime(l.started_at) },
             { key: "src", label: "Origen", align: "left", value: (l) => l.source },
-            { key: "st", label: "Estado", align: "left", value: (l) => STATUS[l.status] ?? l.status },
+            { key: "st", label: "Estado", align: "left", value: (l) => STATUS[l.status] ?? l.status,
+              render: (l) => <Badge tone={l.status === "success" ? "good" : l.status === "failed" ? "bad" : "accent"}>{STATUS[l.status] ?? l.status}</Badge> },
             { key: "new", label: "Nuevos", value: (l) => l.games_new },
             { key: "upd", label: "Actualizados", value: (l) => l.games_updated },
             { key: "same", label: "Sin cambios", value: (l) => l.games_unchanged },
@@ -34,7 +36,7 @@ export default function DataStatus() {
             { key: "msg", label: "Mensaje", align: "left", value: (l) => l.message },
           ]} />
       </Card>
-      <Card title="Errores de extracción o validación pendientes" subtitle="Un registro con errores no se guarda: así no entran datos inconsistentes.">
+      <Card icon={AlertTriangle} title="Errores de extracción o validación pendientes" subtitle="Un registro con errores no se guarda: así no entran datos inconsistentes.">
         <DataTable rows={openErrors} rowKey={(e) => e.id} dense
           columns={[
             { key: "stage", label: "Etapa", align: "left", value: (e) => e.stage },

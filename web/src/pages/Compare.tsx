@@ -1,17 +1,25 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { ArrowLeftRight, BarChart3, LineChart as LineIcon, Swords, Table2 } from "lucide-react";
 import { BarsChart, ChartCard, LinesChart, useThemeColors } from "../components/charts";
-import { MultiPicker, PeriodPicker, defaultPeriod, describePeriod, toPeriod } from "../components/pickers";
-import { Card, EmptyState, Field, Notice, PageHeader, PlayerLink } from "../components/ui";
+import { CompareModeSwitch, CompareSlots, ComparisonTable, HeadToHead, type CmpEntity, type CmpRow } from "../components/compare";
+import { PeriodPicker, defaultPeriod, describePeriod, toPeriod } from "../components/pickers";
+import { Card, EmptyState, Field, FilterBar, Notice, PageHeader, Segmented } from "../components/ui";
 import { useSeason } from "../lib/data";
-import { playerRows, playerSummaries } from "../lib/derive";
-import { COUNT_LABELS, PCT_LABELS, f1, pct, signed } from "../lib/format";
-import { aggregate, COUNT_KEYS, diff, rollingMean, type Aggregate, type CountKey, type PctKey } from "../lib/stats";
+import { playerRows, playerSummaries, type PlayerSummary } from "../lib/derive";
+import { COUNT_LABELS, f1, pct } from "../lib/format";
+import { METRICS, metricValue, type Metric, type View } from "../lib/leaders";
+import { COUNT_KEYS, rollingMean } from "../lib/stats";
 import { chartLabel, chartValue, type ChartKey } from "./PlayerDetail";
 
-type View = "perGame" | "per40" | "total";
-const TABLE_KEYS: CountKey[] = ["pts", "reb", "oreb", "dreb", "ast", "stl", "blk", "tov", "pf", "pfd", "plus_minus", "eff"];
-const TABLE_PCTS: PctKey[] = ["fg_pct", "fg2_pct", "fg3_pct", "ft_pct", "efg_pct", "ts_pct"];
+const DEFAULT_STATS = ["pts", "reb", "ast", "stl", "blk", "tov", "eff", "min", "fg_pct", "fg3_pct", "ft_pct", "ts_pct"];
+const LOWER_BETTER = new Set(["tov", "pf"]);
+const GROUPS = ["Anotación", "Tiro", "Rebotes", "Juego", "Defensa", "Global"] as const;
+
+export function betterOf(m: Metric): "max" | "min" | null {
+  if (m.id === "min") return null;
+  return LOWER_BETTER.has(m.id) ? "min" : "max";
+}
 
 export default function Compare() {
   const sd = useSeason();
@@ -21,123 +29,125 @@ export default function Compare() {
   const setIds = (next: number[]) => setParams(next.length ? { ids: next.join(",") } : {});
   const [period, setPeriod] = useState(defaultPeriod);
   const [view, setView] = useState<View>("perGame");
-  const [barKeys, setBarKeys] = useState<CountKey[]>(["pts", "reb", "ast"]);
+  const [stats, setStats] = useState<string[]>(DEFAULT_STATS);
   const [lineKey, setLineKey] = useState<ChartKey>("pts");
-  const [win, setWin] = useState(1);
+  const [win, setWin] = useState("1");
 
+  const summaries = useMemo(() => (sd ? playerSummaries(sd, toPeriod(period)) : []), [sd, period]);
   const options = useMemo(() => (sd ? playerSummaries(sd).filter((s) => s.agg.games > 0).map((s) => ({
     id: s.playerId, label: s.name, sub: s.currentTeamId ? sd.db.teamsById.get(s.currentTeamId)?.name : undefined,
   })) : []), [sd]);
   if (!sd) return null;
 
-  const selected = ids.filter((id) => sd.db.playersById.has(id)).map((id, i) => {
-    const rows = playerRows(sd, id, toPeriod(period));
-    return { id, name: sd.db.playersById.get(id)!.name, rows, agg: aggregate(rows, rows.map((r) => r.date)) as Aggregate, color: colors.series[i] };
-  });
   const periodText = describePeriod(period, sd.season.code);
-  const gamesCounts = selected.map((s) => s.agg.games);
-  const unequal = selected.length > 1 && Math.max(...gamesCounts) !== Math.min(...gamesCounts);
-  const viewLabel = view === "perGame" ? "por partido" : view === "per40" ? "por 40 minutos" : "totales";
-  const val = (a: Aggregate, k: CountKey) => a.stats[k][view];
-
-  const barData = barKeys.map((k) => ({ cat: COUNT_LABELS[k].short, ...Object.fromEntries(selected.map((s) => [`p${s.id}`, val(s.agg, k)])) }));
-  const maxLen = Math.max(0, ...selected.map((s) => s.rows.length));
-  const lineSeries = selected.map((s) => {
-    const v = s.rows.map((r) => chartValue(r, lineKey));
-    return win > 1 ? rollingMean(v, win) : v;
-  });
-  const lineData = Array.from({ length: maxLen }, (_, i) => ({
-    n: `P${i + 1}`, ...Object.fromEntries(selected.map((s, j) => [`p${s.id}`, lineSeries[j][i] ?? null])),
+  const tname = (id: number | null) => (id ? sd.db.teamsById.get(id)!.name : "");
+  const chosen = ids.map((id) => summaries.find((s) => s.playerId === id)).filter((s): s is PlayerSummary => !!s);
+  const entities: CmpEntity[] = chosen.map((s, i) => ({
+    id: s.playerId, name: s.name, color: colors.series[i], sub: tname(s.currentTeamId), games: s.agg.games,
+    minutesPerGame: s.agg.minutesPerGame, kind: "player",
   }));
+  const metrics = METRICS.filter((m) => stats.includes(m.id));
+  const valueOf = (s: PlayerSummary, m: Metric) => (m.kind === "minutes" ? (view === "total" ? s.agg.minutesTotal : s.agg.minutesPerGame) : metricValue(s, m, view));
+  const rows: CmpRow[] = metrics.map((m) => ({
+    id: m.id, label: m.kind === "minutes" ? (view === "total" ? "Minutos totales" : "Minutos por partido") : m.label, hint: m.hint,
+    values: chosen.map((s) => valueOf(s, m)),
+    format: (v) => (m.kind === "pct" ? pct(v) : f1(v)),
+    better: betterOf(m), isPct: m.kind === "pct",
+    partial: chosen.map((s) => (m.kind === "count" ? s.agg.stats[m.key!].n < s.agg.games : false)),
+  }));
+  const games = chosen.map((s) => s.agg.games);
+  const unequal = chosen.length > 1 && Math.max(...games) !== Math.min(...games);
+  const highlight = view !== "total" || !unequal;
+  const smallMinutes = view === "per40" && chosen.some((s) => (s.agg.minutesTotal ?? 0) < 60);
+  const viewLabel = view === "perGame" ? "por partido" : view === "per40" ? "por 40 minutos" : "totales";
+
+  const countMetrics = metrics.filter((m) => m.kind === "count");
+  const pctMetrics = metrics.filter((m) => m.kind === "pct");
+  const series = chosen.map((s) => ({ key: `p${s.playerId}`, name: s.name }));
+  const legend = entities.map((e) => ({ name: e.name, color: e.color }));
+  const barData = countMetrics.map((m) => ({ cat: m.short, ...Object.fromEntries(chosen.map((s) => [`p${s.playerId}`, metricValue(s, m, view)])) }));
+  const pctData = pctMetrics.map((m) => ({ cat: m.short, ...Object.fromEntries(chosen.map((s) => [`p${s.playerId}`, (() => { const v = metricValue(s, m, view); return v === null ? null : v * 100; })()])) }));
+
+  const w = Number(win);
+  const rowsByPlayer = chosen.map((s) => playerRows(sd, s.playerId, toPeriod(period)));
+  const lineSeries = rowsByPlayer.map((rs) => { const v = rs.map((r) => chartValue(r, lineKey)); return w > 1 ? rollingMean(v, w) : v; });
+  const maxLen = Math.max(0, ...rowsByPlayer.map((r) => r.length));
+  const lineData = Array.from({ length: maxLen }, (_, i) => ({ n: `P${i + 1}`, ...Object.fromEntries(chosen.map((s, j) => [`p${s.playerId}`, lineSeries[j][i] ?? null])) }));
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Comparador de jugadores" subtitle={periodText} />
-      <div className="card space-y-3 p-3">
-        <MultiPicker options={options} value={ids} onChange={setIds} placeholder="Buscar jugador para agregar…" colors={colors.series} />
-        <div className="flex flex-wrap items-end gap-3">
-          <PeriodPicker value={period} onChange={setPeriod} />
-          <Field label="Valores">
-            <select className="input" value={view} onChange={(e) => setView(e.target.value as View)}>
-              <option value="perGame">Por partido</option>
-              <option value="per40">Por 40 minutos</option>
-              <option value="total">Totales</option>
-            </select>
-          </Field>
-        </div>
-      </div>
+      <PageHeader title="Comparador" subtitle="Elegí hasta 4 jugadores: todos se miden en el mismo período." actions={<CompareModeSwitch mode="players" />} />
 
-      {selected.length < 2 ? <EmptyState title="Elegí al menos dos jugadores">Usá el buscador para agregar hasta cuatro jugadores. El período elegido se aplica a todos por igual.</EmptyState> : (
+      <CompareSlots entities={entities} options={options} placeholder="Buscar jugador…"
+        onAdd={(id) => setIds([...ids, id])} onRemove={(id) => setIds(ids.filter((x) => x !== id))} />
+
+      {chosen.length < 2 ? (
+        <EmptyState icon={ArrowLeftRight} title={chosen.length ? "Agregá un segundo jugador" : "Elegí dos o más jugadores"}>
+          Buscalos por nombre en la tarjeta punteada. También podés llegar desde la ficha de un jugador con el botón "Comparar".
+        </EmptyState>
+      ) : (
         <>
-          {unequal && <Notice>Los jugadores tienen distinta cantidad de partidos en el período ({selected.map((s) => `${s.name}: ${s.agg.games}`).join(" · ")}). Para una comparación equivalente probá "Últimos N partidos".</Notice>}
-          <Card title={`Comparación numérica (${viewLabel})`} subtitle={`${periodText}. Diferencias respecto de ${selected[0].name}.`}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm tabular">
-                <thead>
-                  <tr className="border-b border-line text-xs text-ink-2">
-                    <th className="py-1.5 text-left">Estadística</th>
-                    {selected.map((s, i) => (
-                      <th key={s.id} className={`px-2 ${i === 0 ? "text-right" : "text-center"}`} colSpan={i === 0 ? 1 : 2}>
-                        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
-                          <PlayerLink id={s.id} name={s.name} /></span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-line font-semibold"><td className="py-1">Partidos (PJ)</td>
-                    {selected.map((s, i) => <Cells key={s.id} first={i === 0} value={String(s.agg.games)} />)}</tr>
-                  <tr className="border-b border-line"><td className="py-1">Minutos {view === "total" ? "totales" : "por partido"}</td>
-                    {selected.map((s, i) => {
-                      const v = view === "total" ? s.agg.minutesTotal : s.agg.minutesPerGame;
-                      const base = view === "total" ? selected[0].agg.minutesTotal : selected[0].agg.minutesPerGame;
-                      const d = diff(base, v);
-                      return <Cells key={s.id} first={i === 0} value={f1(v)} d={d.abs} rel={d.rel} />;
-                    })}</tr>
-                  {TABLE_KEYS.map((k) => (
-                    <tr key={k} className="border-b border-line">
-                      <td className="py-1">{COUNT_LABELS[k].long}</td>
-                      {selected.map((s, i) => {
-                        const d = diff(val(selected[0].agg, k), val(s.agg, k));
-                        const partial = s.agg.stats[k].n < s.agg.games;
-                        return <Cells key={s.id} first={i === 0} value={`${f1(val(s.agg, k))}${partial ? "*" : ""}`} d={d.abs} rel={k === "plus_minus" ? null : d.rel} />;
-                      })}
-                    </tr>
-                  ))}
-                  {TABLE_PCTS.map((k) => (
-                    <tr key={k} className="border-b border-line last:border-0">
-                      <td className="py-1">{PCT_LABELS[k].long}</td>
-                      {selected.map((s, i) => {
-                        const d = diff(selected[0].agg.pct[k].value, s.agg.pct[k].value, true);
-                        return <Cells key={s.id} first={i === 0} value={pct(s.agg.pct[k].value)} d={d.abs} unit=" pp" />;
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-2 text-xs text-muted">* dato faltante en algunos partidos. "pp" = puntos porcentuales. La diferencia % no se muestra para porcentajes ni +/-, ni cuando la base es 0.</p>
-          </Card>
+          <FilterBar>
+            <PeriodPicker value={period} onChange={setPeriod} />
+            <Field label="Valores">
+              <Segmented ariaLabel="Valores" value={view} onChange={setView}
+                options={[{ value: "perGame", label: "Por partido" }, { value: "per40", label: "Por 40'" }, { value: "total", label: "Totales" }]} />
+            </Field>
+          </FilterBar>
 
-          <ChartCard title={`Comparación ${viewLabel}`} subtitle={`${periodText} · PJ: ${selected.map((s) => `${s.name} ${s.agg.games}`).join(", ")}`}
-            legend={selected.map((s) => ({ name: s.name, color: s.color }))} filename="comparacion-jugadores"
-            csv={{ headers: ["categoria", ...selected.map((s) => s.name)], rows: barKeys.map((k) => [COUNT_LABELS[k].long, ...selected.map((s) => val(s.agg, k))]) }}>
-            <div className="mb-2 flex flex-wrap gap-2">
-              {COUNT_KEYS.filter((k) => !["fg2m", "fg2a", "fg3m", "fg3a", "ftm", "fta"].includes(k)).map((k) => (
-                <label key={k} className="flex items-center gap-1 text-xs text-ink-2">
-                  <input type="checkbox" checked={barKeys.includes(k)} onChange={(e) => setBarKeys(e.target.checked ? [...barKeys, k] : barKeys.filter((x) => x !== k))} />
-                  {COUNT_LABELS[k].short}
-                </label>
+          <div className="card p-4">
+            <div className="mb-2 text-xs font-medium text-ink-2">Estadísticas a comparar</div>
+            <div className="flex flex-wrap gap-x-5 gap-y-3">
+              {GROUPS.map((g) => (
+                <div key={g} className="flex flex-wrap items-center gap-1.5">
+                  <span className="eyebrow mr-1">{g}</span>
+                  {METRICS.filter((m) => m.group === g).map((m) => (
+                    <button key={m.id} className="chip" aria-pressed={stats.includes(m.id)}
+                      onClick={() => setStats(stats.includes(m.id) ? stats.filter((x) => x !== m.id) : [...stats, m.id])}>{m.short}</button>
+                  ))}
+                </div>
               ))}
             </div>
-            <BarsChart data={barData} x="cat" colors={selected.map((s) => s.color)} series={selected.map((s) => ({ key: `p${s.id}`, name: s.name }))} />
-          </ChartCard>
+          </div>
 
-          <ChartCard title={`Evolución: ${chartLabel(lineKey).toLowerCase()} por partido`}
-            subtitle={`${periodText} · Eje X: n.º de partido disputado por cada jugador dentro del período${win > 1 ? ` · media móvil de ${win}` : ""}`}
-            legend={selected.map((s) => ({ name: s.name, color: s.color }))} filename={`evolucion-${lineKey}`}
-            csv={{ headers: ["partido", ...selected.map((s) => s.name)], rows: lineData.map((d) => [d.n, ...selected.map((s) => (d as Record<string, number | string | null>)[`p${s.id}`])]) }}>
-            <div className="mb-2 flex flex-wrap gap-3">
+          {unequal && <Notice title="Distinta cantidad de partidos">{chosen.map((s) => `${s.name}: ${s.agg.games} PJ`).join(" · ")}. {view === "total" ? "En totales no se destaca un ganador porque no es comparable. " : ""}Para un período equivalente, usá "Últimos N".</Notice>}
+          {smallMinutes && <Notice>Algún jugador tiene menos de 60 minutos en el período: los valores por 40' se basan en una muestra muy chica.</Notice>}
+
+          <div className="grid gap-5 xl:grid-cols-5">
+            <Card className="xl:col-span-3" icon={Table2} title={`Comparación numérica (${viewLabel})`}
+              subtitle={`${periodText}. Corona = mejor valor${highlight ? "" : " (desactivado en totales con distinta cantidad de PJ)"}. Debajo, diferencia con ${chosen[0].name}.`}>
+              {rows.length ? <ComparisonTable entities={entities} rows={rows} highlight={highlight} /> : <p className="text-sm text-muted">Elegí al menos una estadística.</p>}
+              <p className="mt-2 text-xs text-muted"><sup className="text-warn">*</sup> dato faltante en algunos partidos. Pérdidas y faltas: el mejor es el valor más bajo.</p>
+            </Card>
+            <Card className="xl:col-span-2" icon={Swords} title={chosen.length === 2 ? "Cara a cara" : "Cara a cara (elegí 2)"}
+              subtitle={chosen.length === 2 ? `${viewLabel} · la barra muestra la proporción de cada uno` : "Con exactamente dos jugadores se muestra la comparación enfrentada."}>
+              {chosen.length === 2
+                ? <HeadToHead a={entities[0]} b={entities[1]} rows={rows.filter((r) => r.values.every((v) => v !== null && v >= 0))} />
+                : <p className="text-sm text-muted">Quitá jugadores hasta dejar dos para ver el cara a cara.</p>}
+            </Card>
+          </div>
+
+          <div className="grid gap-5 xl:grid-cols-2">
+            {countMetrics.length > 0 && (
+              <ChartCard title={`Comparación ${viewLabel}`} subtitle={`${periodText} · PJ: ${chosen.map((s) => `${s.name} ${s.agg.games}`).join(", ")}`}
+                legend={legend} filename="comparacion-jugadores"
+                csv={{ headers: ["categoria", ...chosen.map((s) => s.name)], rows: countMetrics.map((m) => [m.label, ...chosen.map((s) => metricValue(s, m, view))]) }}>
+                <BarsChart data={barData} x="cat" colors={entities.map((e) => e.color)} series={series} />
+              </ChartCard>
+            )}
+            {pctMetrics.length > 0 && (
+              <ChartCard title="Porcentajes de tiro" subtitle={`${periodText} · convertidos/intentados acumulados`} legend={legend} filename="comparacion-porcentajes"
+                csv={{ headers: ["categoria", ...chosen.map((s) => s.name)], rows: pctMetrics.map((m) => [m.label, ...chosen.map((s) => metricValue(s, m, view))]) }}>
+                <BarsChart data={pctData} x="cat" colors={entities.map((e) => e.color)} series={series} formatY={(v) => `${v.toFixed(0)}%`} />
+              </ChartCard>
+            )}
+          </div>
+
+          <ChartCard title={`Evolución: ${chartLabel(lineKey).toLowerCase()} por partido`} filename={`evolucion-${lineKey}`}
+            subtitle={`${periodText} · eje X: n.º de partido de cada jugador dentro del período${w > 1 ? ` · media móvil de ${w}` : ""}`}
+            legend={legend}
+            csv={{ headers: ["partido", ...chosen.map((s) => s.name)], rows: lineData.map((d) => [d.n, ...chosen.map((s) => (d as Record<string, number | string | null>)[`p${s.playerId}`])]) }}
+            controls={<>
               <Field label="Estadística">
                 <select className="input" value={lineKey} onChange={(e) => setLineKey(e.target.value as ChartKey)}>
                   <option value="minutes">Minutos</option>
@@ -145,28 +155,15 @@ export default function Compare() {
                 </select>
               </Field>
               <Field label="Suavizado">
-                <select className="input" value={win} onChange={(e) => setWin(Number(e.target.value))}>
-                  <option value={1}>Valor de cada partido</option>
-                  {[3, 5].map((n) => <option key={n} value={n}>Media móvil {n}</option>)}
-                </select>
+                <Segmented size="sm" ariaLabel="Suavizado" value={win} onChange={setWin}
+                  options={[{ value: "1", label: "Cada partido" }, { value: "3", label: "Media 3" }, { value: "5", label: "Media 5" }]} />
               </Field>
-            </div>
-            <LinesChart data={lineData} x="n" colors={selected.map((s) => s.color)} series={selected.map((s) => ({ key: `p${s.id}`, name: s.name }))} />
+            </>}>
+            <LinesChart data={lineData} x="n" height={300} colors={entities.map((e) => e.color)} series={series} />
           </ChartCard>
+          <p className="flex items-center gap-1.5 text-xs text-muted"><BarChart3 size={12} /><LineIcon size={12} /> Gráficos exportables en PNG (con título, período y fuente) y CSV.</p>
         </>
       )}
     </div>
-  );
-}
-
-function Cells({ first, value, d, rel, unit = "" }: { first: boolean; value: string; d?: number | null; rel?: number | null; unit?: string }) {
-  if (first) return <td className="px-2 text-right font-medium">{value}</td>;
-  return (
-    <>
-      <td className="px-2 text-right font-medium">{value}</td>
-      <td className="pr-2 text-right text-xs text-ink-2">
-        {d === undefined || d === null ? "" : `${signed(d)}${unit}`}{rel !== undefined && rel !== null ? ` (${signed(rel)}%)` : ""}
-      </td>
-    </>
   );
 }

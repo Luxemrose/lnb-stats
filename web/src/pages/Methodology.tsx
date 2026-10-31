@@ -1,3 +1,4 @@
+import { BookOpen, Calculator, ShieldCheck } from "lucide-react";
 import { Card, PageHeader } from "../components/ui";
 
 const FORMULAS: [string, string, string][] = [
@@ -14,13 +15,18 @@ const FORMULAS: [string, string, string][] = [
   ["Récord y tabla", "G, P, %V = G ÷ PJ; orden por %V y diferencia", "Calculada con partidos finalizados almacenados; no aplica los desempates oficiales del reglamento."],
   ["Promedios defensivos", "Estadísticas del rival en los partidos del equipo", "Puntos en contra, rebotes del rival, etc."],
   ["Líderes", "Promedio por partido con mínimo de PJ", "Mínimo = la mitad de los PJ del equipo que más jugó; el dato debe estar en todos sus partidos."],
+  ["Líderes en porcentajes", "Mínimo de PJ + mínimo de intentos por partido", "T3%: 2 triples intentados por partido · TL%: 2 libres · TC%, TS% y eFG%: 5 tiros de campo."],
+  ["Puesto en la liga (N.º)", "Posición en el ranking de la categoría", "Entre jugadores que cumplen los mínimos, en el mismo período elegido."],
+  ["Puntos por equipo", "Σ puntos de ambos equipos ÷ (2 × partidos)", "Promedio de puntos que convierte cada equipo por partido."],
+  ["Tendencias semanales", "Partidos agrupados por semana (lunes a domingo)", "La Liga no publica el número de fecha/jornada de cada partido."],
+  ["Mejor valor (comparador)", "Máximo de la fila; mínimo en pérdidas, faltas y puntos en contra", "En totales con distinta cantidad de PJ no se marca ganador."],
 ];
 
 export default function Methodology() {
   return (
     <div className="space-y-5">
       <PageHeader title="Metodología" subtitle="Cómo se obtienen, validan y calculan los datos de LNB Stats." />
-      <Card title="Reglas de calidad">
+      <Card icon={ShieldCheck} title="Reglas de calidad">
         <ul className="list-disc space-y-1.5 pl-5 text-sm">
           <li><b>Sin datos inventados.</b> Un valor que la fuente no publica se guarda como "sin dato" (s/d), nunca como 0.</li>
           <li><b>Oficial vs. calculado.</b> Las etiquetas <i>Oficial</i> y <i>Calculado</i> indican si un número viene de la fuente o lo calcula la app.</li>
@@ -35,7 +41,7 @@ export default function Methodology() {
           <li><b>Datos de demostración.</b> El modo demo usa equipos y jugadores ficticios ("Demo …") en un archivo separado y se marca con una franja permanente.</li>
         </ul>
       </Card>
-      <Card title="Fórmulas de los indicadores calculados">
+      <Card icon={Calculator} title="Fórmulas de los indicadores calculados">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b border-line text-left text-xs text-ink-2"><th className="py-1.5 pr-3">Indicador</th><th className="pr-3">Fórmula</th><th>Notas</th></tr></thead>
@@ -45,7 +51,7 @@ export default function Methodology() {
           </table>
         </div>
       </Card>
-      <Card title="Abreviaturas">
+      <Card icon={BookOpen} title="Abreviaturas">
         <p className="text-sm text-ink-2">PJ partidos jugados · MIN minutos · PTS puntos · T2/T3/TL dobles, triples y libres (C convertidos, I intentados) · TC tiros de campo · RO/RD/REB rebotes ofensivos, defensivos y totales · AST asistencias · ROB robos · PER pérdidas · TAP tapas · TAPR tapas recibidas · FC/FR faltas cometidas/recibidas · +/- más/menos · VAL valoración · PF/PC puntos a favor/en contra · G/P ganados/perdidos.</p>
       </Card>
     </div>

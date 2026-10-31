@@ -1,104 +1,152 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { ArrowLeftRight, ArrowUpRight, CalendarDays, Clapperboard, Crown, Flame, Trophy, Users, Shield, Activity } from "lucide-react";
+import { ChartCard, LinesChart, useThemeColors } from "../components/charts";
+import { GameRow } from "../components/GameRow";
 import { StandingsCard } from "../components/Standings";
-import { Card, Notice, PageHeader, PlayerLink, StatTile } from "../components/ui";
+import { Avatar, Card, Notice, PageHeader, Segmented, StatTile } from "../components/ui";
 import { useSeason } from "../lib/data";
-import { playerSummaries } from "../lib/derive";
-import { COUNT_LABELS, f1, fdate, fdatetime } from "../lib/format";
-import { isCompleted, leaderMinGames, standings, type CountKey } from "../lib/stats";
+import { playerSummaries, weeklyLeague, type PlayerSummary } from "../lib/derive";
+import { f1, fdatetime, pct } from "../lib/format";
+import { GLOSSARY } from "../lib/glossary";
+import { metricById, metricValue, ranking, type Metric } from "../lib/leaders";
+import { isCompleted, leaderMinGames, standings } from "../lib/stats";
 
-const LEADER_KEYS: CountKey[] = ["pts", "reb", "ast", "stl", "blk", "eff"];
+const LEADER_IDS = ["pts", "reb", "ast", "fg3_pct", "eff"];
 
 export default function Dashboard() {
   const sd = useSeason();
+  const colors = useThemeColors();
+  const [gamesTab, setGamesTab] = useState<"recent" | "next">("recent");
   const data = useMemo(() => {
     if (!sd) return null;
     const table = standings(sd.teamIds, sd.games);
     const done = sd.games.filter(isCompleted).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+    const next = sd.games.filter((g) => g.status === "scheduled").sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""));
     const summaries = playerSummaries(sd);
     const minGames = leaderMinGames(table.map((t) => t.games));
-    return { table, done, summaries, minGames };
+    const weeks = weeklyLeague(sd);
+    const totalPts = done.reduce((a, g) => a + (g.homeScore as number) + (g.awayScore as number), 0);
+    return { done, next, summaries, minGames, weeks, ptsPerTeam: done.length ? totalPts / (done.length * 2) : null };
   }, [sd]);
   if (!sd || !data) return null;
-  const { db, games, season } = sd;
-  const team = (id: number) => db.teamsById.get(id)!;
+  const { db, season } = sd;
+  const teamName = (id: number) => db.teamsById.get(id)!.name;
   const meta = db.ds.meta;
-  const scheduled = games.filter((g) => g.status === "scheduled").length;
-  const withBox = games.filter((g) => g.detailLevel === "box_score").length;
-  const resultOnly = games.filter((g) => g.detailLevel === "result_only").length;
+  const withMinutes = data.summaries.filter((s) => s.agg.games > 0).length;
+  const withBox = data.done.filter((g) => g.detailLevel === "box_score").length;
+  const gamesList = gamesTab === "recent" ? data.done.slice(0, 7) : data.next.slice(0, 7);
 
   return (
-    <div className="space-y-5">
-      <PageHeader title={`Panel · ${season.name}`}
-        subtitle={<>Datos al {fdatetime(meta.lastSuccessfulSync?.finished_at)} · Fuente: {meta.sourceUrl
-          ? <a className="link" href={meta.sourceUrl} target="_blank" rel="noreferrer">{meta.sourceName}</a> : meta.sourceName}</>} />
+    <div className="space-y-6">
+      <PageHeader eyebrow="Liga Nacional de Básquet" title={`Temporada ${season.code}`}
+        subtitle={<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>Datos al {fdatetime(meta.lastSuccessfulSync?.finished_at)}</span>
+          <span className="text-muted">·</span>
+          <span>Fuente: {meta.sourceUrl ? <a className="link underline decoration-line-strong underline-offset-2" href={meta.sourceUrl} target="_blank" rel="noreferrer">sitio oficial de la Liga</a> : meta.sourceName}</span>
+        </span>}
+        actions={<>
+          <Link to="/comparar" className="btn"><ArrowLeftRight size={15} /> Comparar</Link>
+          <Link to="/rankings" className="btn"><Trophy size={15} /> Rankings</Link>
+          <Link to="/contenido" className="btn btn-primary"><Clapperboard size={15} /> Quinteto Inicial</Link>
+        </>} />
 
       {db.ds.openErrors.length > 0 && (
-        <Notice>Hay {db.ds.openErrors.length} errores de extracción pendientes: algunos partidos pueden faltar. <Link className="link" to="/datos">Ver detalle</Link>.</Notice>
+        <Notice title="Hay errores de actualización pendientes">
+          {db.ds.openErrors.length} partido(s) no se pudieron procesar y pueden faltar. <Link className="link underline" to="/datos">Ver detalle</Link>
+        </Notice>
       )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatTile label="Partidos finalizados" value={data.done.length} sub={`${scheduled} programados en la base`} />
-        <StatTile label="Con planilla completa" value={withBox} sub={resultOnly ? `${resultOnly} sólo con resultado` : "todos con estadísticas"} />
-        <StatTile label="Equipos" value={sd.teamIds.length} />
-        <StatTile label="Jugadores con minutos" value={data.summaries.filter((s) => s.agg.games > 0).length} />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile icon={CalendarDays} label="Partidos disputados" value={data.done.length}
+          sub={`${data.next.length} programados · ${withBox === data.done.length ? "todos con planilla" : `${withBox} con planilla`}`} />
+        <StatTile icon={Shield} label="Equipos" value={sd.teamIds.length} sub="participantes en la temporada" />
+        <StatTile icon={Users} label="Jugadores registrados" value={new Set(sd.rosters.map((r) => r.playerId)).size} sub={`${withMinutes} con minutos en cancha`} />
+        <StatTile icon={Activity} label="Puntos por equipo" value={f1(data.ptsPerTeam)} hint={GLOSSARY.ptsPerTeam} emphasis
+          sub={data.ptsPerTeam !== null ? `${f1(data.ptsPerTeam * 2)} por partido (ambos equipos)` : undefined} />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-5">
-        <StandingsCard sd={sd} className="xl:col-span-3" />
-        <Card className="xl:col-span-2" title="Últimos resultados" actions={<Link className="btn text-xs" to="/partidos">Todos los partidos</Link>}>
-          <ul className="divide-y divide-line">
-            {data.done.slice(0, 8).map((g) => {
-              const hw = (g.homeScore as number) > (g.awayScore as number);
-              return (
-                <li key={g.id} className="py-2">
-                  <Link to={`/partidos/${g.id}`} className="grid grid-cols-[1fr_auto] gap-x-3 rounded-md px-1 hover:bg-surface-2">
-                    <span className={hw ? "font-semibold" : "text-ink-2"}>{team(g.homeTeamId).name}</span>
-                    <span className={`tabular text-right ${hw ? "font-semibold" : "text-ink-2"}`}>{g.homeScore}</span>
-                    <span className={!hw ? "font-semibold" : "text-ink-2"}>{team(g.awayTeamId).name}</span>
-                    <span className={`tabular text-right ${!hw ? "font-semibold" : "text-ink-2"}`}>{g.awayScore}</span>
-                    <span className="col-span-2 text-xs text-muted">{fdate(g.date)}{g.detailLevel !== "box_score" ? " · sin planilla individual" : ""}</span>
-                  </Link>
-                </li>
-              );
-            })}
-            {!data.done.length && <li className="py-3 text-sm text-ink-2">No hay partidos finalizados en la base.</li>}
-          </ul>
+      <div className="grid gap-5 xl:grid-cols-3">
+        <Card className="xl:col-span-2" icon={Crown} title="Líderes estadísticos"
+          subtitle={`Promedios por partido · mínimo ${data.minGames} PJ`}
+          actions={<Link to="/rankings" className="btn btn-sm">Todos los rankings <ArrowUpRight size={14} /></Link>}>
+          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+            {LEADER_IDS.map((id) => <LeaderCard key={id} metric={metricById(id)} summaries={data.summaries} minGames={data.minGames} teamName={teamName} />)}
+            <Link to="/rankings" className="card-hover flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-line-strong p-4 text-center text-sm text-ink-2">
+              <Trophy size={20} className="text-accent-text" />
+              Ver más categorías<span className="text-xs text-muted">robos, tapas, % de campo, TS%…</span>
+            </Link>
+          </div>
+        </Card>
+
+        <Card icon={Flame} title="Partidos" actions={
+          <Segmented size="sm" ariaLabel="Partidos" value={gamesTab} onChange={setGamesTab}
+            options={[{ value: "recent", label: "Resultados" }, { value: "next", label: "Próximos" }]} />}>
+          <div className="-mx-2 divide-y divide-line">
+            {gamesList.map((g) => <GameRow key={g.id} game={g} teamName={teamName} />)}
+            {!gamesList.length && <p className="px-2 py-6 text-center text-sm text-ink-2">{gamesTab === "recent" ? "Todavía no hay partidos finalizados." : "No hay partidos programados en la base."}</p>}
+          </div>
+          <Link to="/partidos" className="btn btn-sm mt-3 w-full">Ver todos los partidos</Link>
         </Card>
       </div>
 
-      <Card title="Líderes estadísticos" subtitle={`Promedio por partido. Mínimo ${data.minGames} PJ (la mitad de los partidos del equipo con más partidos).`}
-        actions={<Link className="btn text-xs" to="/jugadores">Ver todos los jugadores</Link>}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {LEADER_KEYS.map((k) => {
-            const top = data.summaries
-              .filter((s) => s.agg.games >= data.minGames && s.agg.stats[k].perGame !== null && s.agg.stats[k].n === s.agg.games)
-              .sort((a, b) => (b.agg.stats[k].perGame as number) - (a.agg.stats[k].perGame as number)).slice(0, 5);
-            return (
-              <div key={k}>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">{COUNT_LABELS[k].long}</div>
-                <ol className="space-y-1 text-sm">
-                  {top.map((s, i) => (
-                    <li key={s.playerId} className="flex items-baseline gap-2">
-                      <span className="w-4 text-xs text-muted">{i + 1}</span>
-                      <span className="min-w-0 flex-1 truncate"><PlayerLink id={s.playerId} name={s.name} />
-                        <span className="ml-1 text-xs text-muted">{s.currentTeamId ? team(s.currentTeamId).name : ""}</span></span>
-                      <span className="tabular font-semibold">{f1(s.agg.stats[k].perGame)}</span>
-                    </li>
-                  ))}
-                  {!top.length && <li className="text-ink-2">Sin datos suficientes.</li>}
-                </ol>
-              </div>
-            );
-          })}
+      <div className="grid gap-5 xl:grid-cols-5">
+        <StandingsCard sd={sd} compact className="xl:col-span-3" />
+        <div className="space-y-5 xl:col-span-2">
+          <ChartCard title="Puntos por equipo, semana a semana" filename="liga-puntos-por-semana"
+            subtitle={`Temporada ${season.code} · promedio de puntos de cada equipo por partido, agrupado por semana`}
+            legend={[{ name: "Puntos por equipo", color: colors.series[0] }]}
+            csv={{ headers: ["semana_desde", "partidos", "puntos_por_equipo"], rows: data.weeks.map((w) => [w.week, w.games, w.ptsPerTeam]) }}
+            note="La Liga no publica el número de fecha de cada partido: se agrupa por semana (de lunes a domingo).">
+            <LinesChart data={data.weeks.map((w) => ({ x: w.label, v: w.ptsPerTeam }))} x="x" height={200}
+              series={[{ key: "v", name: "Puntos por equipo" }]} colors={[colors.series[0]]} />
+          </ChartCard>
+          <ChartCard title="Efectividad en triples de la liga" filename="liga-triples-por-semana"
+            subtitle={`Temporada ${season.code} · % de triples de todos los equipos, por semana`}
+            legend={[{ name: "% de triples", color: colors.series[1] }]}
+            csv={{ headers: ["semana_desde", "partidos", "pct_triples"], rows: data.weeks.map((w) => [w.week, w.games, w.fg3Pct]) }}>
+            <LinesChart data={data.weeks.map((w) => ({ x: w.label, v: w.fg3Pct === null ? null : w.fg3Pct * 100 }))} x="x" height={200}
+              series={[{ key: "v", name: "% de triples" }]} colors={[colors.series[1]]} formatY={(v) => `${v.toFixed(0)}%`} />
+          </ChartCard>
         </div>
-      </Card>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Link to="/comparar" className="card p-4 hover:bg-surface-2"><div className="font-semibold">Comparador de jugadores</div><div className="text-sm text-ink-2">Tablas y gráficos con períodos equivalentes.</div></Link>
-        <Link to="/equipos/comparar" className="card p-4 hover:bg-surface-2"><div className="font-semibold">Comparar equipos</div><div className="text-sm text-ink-2">Récord, ataque, defensa y evolución.</div></Link>
-        <Link to="/contenido" className="card p-4 hover:bg-surface-2"><div className="font-semibold">Vista Quinteto Inicial</div><div className="text-sm text-ink-2">Indicadores y gráficos listos para guion y video.</div></Link>
       </div>
+    </div>
+  );
+}
+
+function LeaderCard({ metric, summaries, minGames, teamName }: {
+  metric: Metric; summaries: PlayerSummary[]; minGames: number; teamName: (id: number) => string;
+}) {
+  const top = ranking(summaries, metric, "perGame", minGames).slice(0, 5);
+  const fmt = (s: PlayerSummary) => (metric.kind === "pct" ? pct(metricValue(s, metric, "perGame")) : f1(metricValue(s, metric, "perGame")));
+  const [first, ...rest] = top;
+  return (
+    <div className="min-w-0 rounded-xl border border-line bg-surface-2/40 p-3.5">
+      <div className="mb-2.5 flex items-center justify-between">
+        <span className="eyebrow">{metric.label}</span>
+        <Link to={`/rankings?cat=${metric.id}`} className="text-[11px] text-muted hover:text-accent-text" title={metric.attLabel ? `Mínimo ${metric.attLabel}` : undefined}>Ranking</Link>
+      </div>
+      {first ? (
+        <>
+          <Link to={`/jugadores/${first.playerId}`} className="group flex items-center gap-3">
+            <Avatar name={first.name} size={40} tone="accent" />
+            <span className="min-w-0 flex-1">
+              <span className="line-clamp-2 text-sm font-semibold leading-tight group-hover:text-accent-text">{first.name}</span>
+              <span className="mt-0.5 block truncate text-xs text-muted">{first.currentTeamId ? teamName(first.currentTeamId) : ""} · {first.agg.games} PJ</span>
+            </span>
+            <span className="num shrink-0 text-2xl font-bold text-accent-text">{fmt(first)}</span>
+          </Link>
+          <ol className="mt-3 space-y-1.5 border-t border-line pt-2.5">
+            {rest.map((s, i) => (
+              <li key={s.playerId} className="flex items-center gap-2 text-[13px]">
+                <span className="num w-3 text-xs text-muted">{i + 2}</span>
+                <Link to={`/jugadores/${s.playerId}`} className="link min-w-0 flex-1 truncate">{s.name}</Link>
+                <span className="num font-semibold text-ink-2">{fmt(s)}</span>
+              </li>
+            ))}
+          </ol>
+        </>
+      ) : <p className="py-4 text-center text-xs text-muted">Sin jugadores que cumplan el mínimo{metric.attLabel ? ` (${metric.attLabel})` : ""}.</p>}
     </div>
   );
 }

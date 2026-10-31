@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import { BarsChart, ChartCard, LinesChart, useThemeColors } from "../components/charts";
 import { MultiPicker, PeriodPicker, defaultPeriod, describePeriod, toPeriod } from "../components/pickers";
-import { Card, EmptyState, Field, Notice, PageHeader } from "../components/ui";
+import { Clapperboard, Copy, Check, Download, FileText, Sparkles } from "lucide-react";
+import { Avatar, Card, EmptyState, Field, FilterBar, Notice, PageHeader, Segmented, TeamMark } from "../components/ui";
 import { useSeason } from "../lib/data";
-import { playerRows, playerSummaries } from "../lib/derive";
+import { playerRows, playerSummaries, teamPeriodData } from "../lib/derive";
 import { COUNT_LABELS, downloadText, f1, fdate, fdatetime, toCsv } from "../lib/format";
 import { aggregate, diff, rollingMean, type CountKey } from "../lib/stats";
-import { teamPeriodData } from "./TeamDetail";
 
 const KEYS: CountKey[] = ["pts", "reb", "ast", "stl", "blk", "tov", "eff"];
 
@@ -30,6 +30,7 @@ export default function Content() {
   const [period, setPeriod] = useState(defaultPeriod);
   const [split, setSplit] = useState("");
   const [win, setWin] = useState(3);
+  const [copied, setCopied] = useState(false);
 
   const playerOptions = useMemo(() => (sd ? playerSummaries(sd).filter((s) => s.agg.games > 0)
     .map((s) => ({ id: s.playerId, label: s.name, sub: s.currentTeamId ? sd.db.teamsById.get(s.currentTeamId)?.name : undefined })) : []), [sd]);
@@ -93,42 +94,49 @@ export default function Content() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Vista Quinteto Inicial" subtitle="Armá comparaciones y exportá gráficos y datos para guiones y videos." />
+      <PageHeader eyebrow="Herramienta de contenido" title="Quinteto Inicial"
+        subtitle="Elegí jugadores o equipos, un indicador y un corte de fechas: obtenés tarjetas, gráficos exportables y un resumen listo para el guion."
+        leading={<span className="hidden h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent-text sm:grid"><Clapperboard size={26} /></span>} />
       {meta.mode === "demo" && <Notice>Estás en modo demostración: todo lo que se exporte desde acá es ficticio.</Notice>}
-      <div className="card space-y-3 p-3">
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="Analizar">
-            <select className="input" value={kind} onChange={(e) => { setKind(e.target.value as "players" | "teams"); setIds([]); }}>
-              <option value="players">Jugadores</option><option value="teams">Equipos</option>
-            </select>
-          </Field>
-          <Field label="Indicador (por partido)">
-            <select className="input" value={key} onChange={(e) => setKey(e.target.value as CountKey)}>
-              {KEYS.map((k) => <option key={k} value={k}>{COUNT_LABELS[k].long}</option>)}
-            </select>
-          </Field>
-          <Field label="Comparar antes/después del"><input className="input" type="date" value={split} onChange={(e) => setSplit(e.target.value)} /></Field>
-          <Field label="Media móvil">
-            <select className="input" value={win} onChange={(e) => setWin(Number(e.target.value))}>
-              <option value={1}>Sin suavizar</option>{[3, 5].map((n) => <option key={n} value={n}>{n} partidos</option>)}
-            </select>
-          </Field>
-        </div>
+      <FilterBar>
+        <Field label="Analizar">
+          <Segmented ariaLabel="Analizar" value={kind} onChange={(v) => { setKind(v); setIds([]); }}
+            options={[{ value: "players", label: "Jugadores" }, { value: "teams", label: "Equipos" }]} />
+        </Field>
+        <Field label="Indicador (por partido)">
+          <select className="input w-48" value={key} onChange={(e) => setKey(e.target.value as CountKey)}>
+            {KEYS.map((k) => <option key={k} value={k}>{COUNT_LABELS[k].long}</option>)}
+          </select>
+        </Field>
+        <Field label="Comparar antes/después del" hint="Opcional: divide el período en dos tramos para comparar (por ejemplo, antes y después de una lesión o de un cambio de entrenador).">
+          <input className="input" type="date" value={split} onChange={(e) => setSplit(e.target.value)} />
+        </Field>
+        <Field label="Media móvil">
+          <Segmented ariaLabel="Media móvil" value={String(win)} onChange={(v) => setWin(Number(v))}
+            options={[{ value: "1", label: "No" }, { value: "3", label: "3 PJ" }, { value: "5", label: "5 PJ" }]} />
+        </Field>
         <PeriodPicker value={period} onChange={setPeriod} />
+      </FilterBar>
+      <div className="card p-4">
+        <div className="mb-2 text-xs font-medium text-ink-2">{kind === "players" ? "Jugadores" : "Equipos"} (hasta 4)</div>
         <MultiPicker options={kind === "players" ? playerOptions : teamOptions} value={ids} onChange={setIds} colors={colors.series}
           placeholder={kind === "players" ? "Agregar jugador…" : "Agregar equipo…"} />
       </div>
 
-      {!subjects.length ? <EmptyState title="Elegí uno o más jugadores o equipos" /> : (
+      {!subjects.length ? <EmptyState icon={Sparkles} title="Elegí uno o más jugadores o equipos">Usá el buscador de arriba. Las tarjetas, los gráficos y el resumen aparecen al instante.</EmptyState> : (
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {subjects.map((s) => (
-              <div key={s.id} className="card p-4" style={{ borderTop: `4px solid ${s.color}` }}>
-                <div className="truncate text-sm font-semibold">{s.name}</div>
-                <div className="mt-1 text-3xl font-bold">{f1(s.value)}</div>
+              <div key={s.id} className="card relative overflow-hidden p-4">
+                <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: s.color }} />
+                <div className="flex items-center gap-2.5">
+                  {kind === "players" ? <Avatar name={s.name} size={32} tone={s.color} /> : <TeamMark name={s.name} size={32} />}
+                  <div className="min-w-0 truncate text-sm font-semibold">{s.name}</div>
+                </div>
+                <div className="num mt-3 text-4xl font-extrabold tracking-tight">{f1(s.value)}</div>
                 <div className="text-xs text-ink-2">{label.toLowerCase()} por partido · {s.games} PJ</div>
                 {s.before && s.after && (
-                  <div className="mt-2 text-xs text-ink-2">Antes {f1(s.before.value)} ({s.before.games} PJ) → después {f1(s.after.value)} ({s.after.games} PJ)</div>
+                  <div className="num mt-3 rounded-lg bg-surface-2 px-2.5 py-1.5 text-xs text-ink-2">Antes {f1(s.before.value)} ({s.before.games} PJ) → después <span className="font-semibold text-ink">{f1(s.after.value)}</span> ({s.after.games} PJ)</div>
                 )}
               </div>
             ))}
@@ -147,14 +155,15 @@ export default function Content() {
             </ChartCard>
           </div>
 
-          <Card title="Resumen de datos" subtitle="Texto armado automáticamente con los números de arriba (sin interpretación). Revisalo antes de usarlo."
+          <Card icon={FileText} title="Resumen de datos" subtitle="Texto armado automáticamente con los números de arriba (sin interpretación). Revisalo antes de usarlo."
             actions={<>
-              <button className="btn text-xs" onClick={() => navigator.clipboard?.writeText([...summary, "", source, stamp].join("\n"))}>Copiar</button>
-              <button className="btn text-xs" onClick={() => downloadText(`quinteto-inicial-${key}.csv`, toCsv(
+              <button className="btn btn-sm" onClick={() => { void navigator.clipboard?.writeText([...summary, "", source, stamp].join("\n")).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800); }); }}>
+                {copied ? <><Check size={14} /> Copiado</> : <><Copy size={14} /> Copiar</>}</button>
+              <button className="btn btn-sm" onClick={() => downloadText(`quinteto-inicial-${key}.csv`, toCsv(
                 ["nombre", "indicador", "periodo", "pj", "valor_por_partido", "corte", "pj_antes", "valor_antes", "pj_despues", "valor_despues", "fuente", "actualizacion"],
-                subjects.map((s) => [s.name, label, periodText, s.games, s.value, split || null, s.before?.games ?? null, s.before?.value ?? null, s.after?.games ?? null, s.after?.value ?? null, source, stamp])))}>CSV</button>
+                subjects.map((s) => [s.name, label, periodText, s.games, s.value, split || null, s.before?.games ?? null, s.before?.value ?? null, s.after?.games ?? null, s.after?.value ?? null, source, stamp])))}><Download size={14} /> CSV</button>
             </>}>
-            <ul className="space-y-1.5 text-sm">{summary.map((t, i) => <li key={i}>{t}</li>)}</ul>
+            <ul className="space-y-2 text-sm leading-relaxed">{summary.map((t, i) => <li key={i} className="rounded-lg bg-surface-2 px-3 py-2">{t}</li>)}</ul>
             <div className="mt-3 text-xs text-muted">{source} · {stamp}</div>
           </Card>
         </>
