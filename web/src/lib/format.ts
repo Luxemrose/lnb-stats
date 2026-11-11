@@ -1,3 +1,4 @@
+import { saveFile } from "./native";
 import type { CountKey, Num, PctKey } from "./stats";
 
 // Terminología habitual del básquet argentino.
@@ -75,11 +76,9 @@ export function toCsv(headers: string[], rows: (string | number | null | undefin
   return [headers, ...rows].map((r) => r.map(esc).join(",")).join("\n");
 }
 
+/** Exporta texto (CSV). En el navegador lo descarga; en la app abre "Compartir" (ver native.ts). */
 export function downloadText(filename: string, text: string, mime = "text/csv;charset=utf-8") {
   // BOM para que Excel en español abra bien las tildes.
-  const blob = new Blob([mime.startsWith("text/csv") ? "﻿" + text : text], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const blob = new Blob([mime.startsWith("text/csv") ? "\ufeff" + text : text], { type: mime });
+  void saveFile(filename, blob);
 }

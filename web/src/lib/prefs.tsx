@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { setSystemBarsTheme } from "./native";
 
 /** Preferencias de cada visitante (se guardan en su navegador; si no hay almacenamiento, duran la sesión). */
 export type ThemePref = "dark" | "light" | "system";
@@ -40,6 +41,7 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", resolvedTheme);
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", resolvedTheme === "dark" ? "#10141D" : "#F4F6FA");
+    void setSystemBarsTheme(resolvedTheme);
   }, [resolvedTheme]);
 
   return (

@@ -5,6 +5,7 @@ import { Clapperboard, Copy, Check, Download, FileText, Sparkles } from "lucide-
 import { CrestBox } from "../components/Crest";
 import { Card, EmptyState, Field, FilterBar, Notice, PageHeader, Segmented } from "../components/ui";
 import { useSeason } from "../lib/data";
+import { copyText } from "../lib/native";
 import { playerRows, playerSummaries, teamPeriodData } from "../lib/derive";
 import { COUNT_LABELS, downloadText, f1, fdate, fdatetime, toCsv } from "../lib/format";
 import { aggregate, diff, rollingMean, type CountKey } from "../lib/stats";
@@ -159,7 +160,7 @@ export default function Content() {
 
           <Card icon={FileText} title="Resumen de datos" subtitle="Texto armado automáticamente con los números de arriba (sin interpretación). Revisalo antes de usarlo."
             actions={<>
-              <button className="btn btn-sm" onClick={() => { void navigator.clipboard?.writeText([...summary, "", source, stamp].join("\n")).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800); }); }}>
+              <button className="btn btn-sm" onClick={() => { void copyText([...summary, "", source, stamp].join("\n")).then((ok) => { if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1800); } }); }}>
                 {copied ? <><Check size={14} /> Copiado</> : <><Copy size={14} /> Copiar</>}</button>
               <button className="btn btn-sm" onClick={() => downloadText(`quinteto-inicial-${key}.csv`, toCsv(
                 ["nombre", "indicador", "periodo", "pj", "valor_por_partido", "corte", "pj_antes", "valor_antes", "pj_despues", "valor_despues", "fuente", "actualizacion"],

@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useData } from "../lib/data";
+import { REMOTE_BASE, isNative } from "../lib/native";
 
 /**
  * Escudos oficiales (descargados de laliganacional.com.ar por el pipeline, ver pipeline/lnbstats/crests.py).
@@ -24,14 +25,27 @@ export function useCrest(teamId: number | null | undefined, seasonId?: number | 
   return url && !failed.has(url) ? url : null;
 }
 
+/**
+ * En la app, los escudos vienen incluidos. Si falta uno (equipo nuevo después de compilar la app),
+ * se pide al sitio publicado; si tampoco carga, no se muestra nada.
+ */
+export function useCrestSrc(url: string | null): [string | null, () => void] {
+  const [attempt, setAttempt] = useState(0);
+  if (!url) return [null, () => {}];
+  const src = attempt === 0 ? url : attempt === 1 && isNative ? `${REMOTE_BASE}${url}` : null;
+  const onError = () => {
+    if (attempt === 0 && isNative) setAttempt(1);
+    else { failed.add(url); setAttempt(2); }
+  };
+  return [src, onError];
+}
+
 export function CrestLayer({ teamId, seasonId, size = "cell" }: { teamId: number | null | undefined; seasonId?: number | null; size?: "cell" | "card" | "hero" }) {
-  const url = useCrest(teamId, seasonId);
-  const [broken, setBroken] = useState(false);
-  if (!url || broken) return null;
+  const [src, onError] = useCrestSrc(useCrest(teamId, seasonId));
+  if (!src) return null;
   return (
     <span aria-hidden className={`crest-layer crest-${size}`}>
-      <img src={url} alt="" loading="lazy" decoding="async" draggable={false}
-        onError={() => { failed.add(url); setBroken(true); }} />
+      <img src={src} alt="" loading="lazy" decoding="async" draggable={false} onError={onError} />
     </span>
   );
 }

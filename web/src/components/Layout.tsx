@@ -1,11 +1,12 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import {
   ArrowLeftRight, BookOpen, CalendarDays, Clapperboard, Clock, Database, Ellipsis, History, LayoutDashboard, Moon,
-  PanelLeftClose, PanelLeftOpen, Search, Settings, Shield, Sun, Trophy, Users, X, type LucideIcon,
+  CloudOff, PanelLeftClose, PanelLeftOpen, RefreshCw, Search, Settings, Shield, Sun, Trophy, Users, X, type LucideIcon,
 } from "lucide-react";
 import { useData } from "../lib/data";
 import { fdatetime } from "../lib/format";
+import { appDataMode, onBackButton } from "../lib/native";
 import { usePrefs } from "../lib/prefs";
 import { GlobalSearch } from "./GlobalSearch";
 
@@ -83,7 +84,7 @@ function Sidebar({ path }: { path: string }) {
     </div>
   );
   return (
-    <aside className={`fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-line bg-surface transition-[width] lg:flex ${c ? "w-[72px]" : "w-60"}`}>
+    <aside className={`pt-safe fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-line bg-surface transition-[width] lg:flex ${c ? "w-[72px]" : "w-60"}`}>
       <div className={`flex h-16 items-center ${c ? "justify-center" : "px-5"}`}><Logo compact={c} /></div>
       <nav aria-label="Secciones" className="scrollbar-thin flex-1 overflow-y-auto px-3 pb-4">
         <div className="space-y-0.5 pt-2">{MAIN.map((it) => <SideLink key={it.to} item={it} collapsed={c} path={path} />)}</div>
@@ -101,12 +102,13 @@ function Sidebar({ path }: { path: string }) {
 }
 
 function TopBar({ onSearch }: { onSearch: () => void }) {
-  const { db, seasonId, setSeasonId } = useData();
+  const { db, seasonId, setSeasonId, sync, refresh, mode } = useData();
+  const showSync = appDataMode && mode === "real";
   const { resolvedTheme, setTheme } = usePrefs();
   const last = db?.ds.meta.lastSuccessfulSync?.finished_at;
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
+    <header className="pt-safe sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur-md">
+      <div className="topbar-row safe-x mx-auto flex h-16 max-w-[1440px] items-center gap-2 sm:gap-3">
         <div className="lg:hidden"><Logo compact /></div>
         {db && db.ds.seasons.length > 0 && (
           <label className="relative">
@@ -128,6 +130,13 @@ function TopBar({ onSearch }: { onSearch: () => void }) {
           <span className="hidden items-center gap-1.5 text-xs text-muted xl:flex" title={`Última actualización exitosa: ${fdatetime(last)}`}>
             <Clock size={14} /> Actualizado {relTime(last)}
           </span>
+          {showSync && (
+            <button className="btn btn-ghost btn-icon" onClick={() => void refresh()} disabled={sync.checking}
+              aria-label={sync.offline ? "Sin conexión. Reintentar actualización" : "Buscar datos nuevos"}
+              title={sync.offline ? "Sin conexión" : `Datos al ${fdatetime(last)}`}>
+              {sync.offline && !sync.checking ? <CloudOff size={17} className="text-warn" /> : <RefreshCw size={17} className={sync.checking ? "animate-spin" : ""} />}
+            </button>
+          )}
           <button className="btn btn-ghost btn-icon" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
             aria-label={resolvedTheme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"} title="Cambiar tema">
             {resolvedTheme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
@@ -144,18 +153,18 @@ function MobileNav({ path, onMore }: { path: string; onMore: () => void }) {
   const moreActive = !items.some((it) => isActive(it.to, path));
   return (
     <nav aria-label="Secciones principales" className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md lg:hidden">
-      <div className="grid grid-cols-5">
+      <div className="grid grid-cols-5" style={{ paddingLeft: "var(--sal)", paddingRight: "var(--sar)" }}>
         {items.map((it) => {
           const active = isActive(it.to, path);
           return (
             <NavLink key={it.to} to={it.to} aria-current={active ? "page" : undefined}
-              className={`flex h-[60px] flex-col items-center justify-center gap-1 text-[11px] font-medium ${active ? "text-accent-text" : "text-muted"}`}>
-              <it.icon size={20} />{it.short ?? it.label}
+              className={`mnav-item flex h-[60px] flex-col items-center justify-center gap-1 text-[11px] font-medium ${active ? "text-accent-text" : "text-muted"}`}>
+              <it.icon size={20} /><span className="mnav-label">{it.short ?? it.label}</span>
             </NavLink>
           );
         })}
-        <button onClick={onMore} className={`flex h-[60px] flex-col items-center justify-center gap-1 text-[11px] font-medium ${moreActive ? "text-accent-text" : "text-muted"}`}>
-          <Ellipsis size={20} />Más
+        <button onClick={onMore} aria-label="Más secciones" className={`mnav-item flex h-[60px] flex-col items-center justify-center gap-1 text-[11px] font-medium ${moreActive ? "text-accent-text" : "text-muted"}`}>
+          <Ellipsis size={20} /><span className="mnav-label">Más</span>
         </button>
       </div>
     </nav>
@@ -188,12 +197,72 @@ function MoreSheet({ path, onClose }: { path: string; onClose: () => void }) {
   );
 }
 
+/** Aviso cuando la app no tiene conexión: se ven los últimos datos guardados. */
+function OfflineBanner() {
+  const { db, sync, refresh, mode } = useData();
+  if (!appDataMode || mode !== "real" || !sync.offline || !db) return null;
+  return (
+    <div role="status" className="flex items-center justify-center gap-2 border-b border-warn/30 bg-warn-soft px-4 py-2 text-center text-xs text-ink">
+      <CloudOff size={14} className="shrink-0 text-warn" />
+      <span>Sin conexión · mostrando los datos guardados del {fdatetime(db.ds.meta.generatedAt)}</span>
+      <button className="font-semibold text-accent-text underline underline-offset-2" onClick={() => void refresh()} disabled={sync.checking}>
+        {sync.checking ? "Probando…" : "Reintentar"}
+      </button>
+    </div>
+  );
+}
+
+/** Deslizar hacia abajo desde el inicio de la página para buscar datos nuevos (sólo en la app). */
+function PullToRefresh() {
+  const { refresh, mode } = useData();
+  const [pull, setPull] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const start = useRef<number | null>(null);
+  useEffect(() => {
+    if (!appDataMode || mode !== "real") return;
+    const onStart = (e: TouchEvent) => { start.current = window.scrollY <= 0 && !document.querySelector('[aria-modal="true"]') ? e.touches[0].clientY : null; };
+    const onMove = (e: TouchEvent) => {
+      if (start.current === null) return;
+      const d = e.touches[0].clientY - start.current;
+      setPull(d > 0 ? Math.min(d * 0.5, 90) : 0);
+    };
+    const onEnd = () => {
+      if (start.current !== null && pull >= 60 && !busy) {
+        setBusy(true);
+        void refresh().finally(() => { setBusy(false); setPull(0); });
+      } else setPull(0);
+      start.current = null;
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchmove", onMove, { passive: true });
+    window.addEventListener("touchend", onEnd);
+    return () => { window.removeEventListener("touchstart", onStart); window.removeEventListener("touchmove", onMove); window.removeEventListener("touchend", onEnd); };
+  }, [mode, refresh, pull, busy]);
+  if (!pull && !busy) return null;
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-x-0 z-50 flex justify-center" style={{ top: `calc(var(--sat) + ${busy ? 72 : pull}px)` }}>
+      <span className={`grid h-9 w-9 place-items-center rounded-full border border-line-strong bg-surface-2 shadow-lg ${pull >= 60 || busy ? "text-accent-text" : "text-muted"}`}>
+        <RefreshCw size={17} className={busy ? "animate-spin" : ""} style={busy ? undefined : { transform: `rotate(${pull * 3}deg)` }} />
+      </span>
+    </div>
+  );
+}
+
 export function Layout({ children }: { children: ReactNode }) {
   const { mode, setMode } = useData();
   const { sidebarCollapsed } = usePrefs();
   const [searchOpen, setSearchOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const { pathname } = useLocation();
+  const panels = useRef({ searchOpen, moreOpen });
+  panels.current = { searchOpen, moreOpen };
+
+  // Android: el botón "atrás" primero cierra el buscador o el menú; después navega hacia atrás.
+  useEffect(() => onBackButton(() => {
+    if (panels.current.searchOpen) { setSearchOpen(false); return true; }
+    if (panels.current.moreOpen) { setMoreOpen(false); return true; }
+    return false;
+  }), []);
 
   useEffect(() => { window.scrollTo(0, 0); setMoreOpen(false); }, [pathname]);
   useEffect(() => {
@@ -219,7 +288,9 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         )}
         <TopBar onSearch={() => setSearchOpen(true)} />
-        <main className="mx-auto max-w-[1440px] px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12">{children}</main>
+        <OfflineBanner />
+        <PullToRefresh />
+        <main className="safe-x main-pb mx-auto max-w-[1440px] pt-6">{children}</main>
       </div>
       <MobileNav path={pathname} onMore={() => setMoreOpen(true)} />
       {moreOpen && <MoreSheet path={pathname} onClose={() => setMoreOpen(false)} />}

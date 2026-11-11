@@ -19,6 +19,7 @@ data/       lnb.sql (base real, en git) · lnb.sqlite (se reconstruye) · demo.s
 web/        React + TypeScript + Vite + Tailwind + Recharts + Lucide (tema oscuro por defecto)
   public/data/real.json  ← lo que muestra la web (generado por el pipeline)
   public/data/demo.json  ← datos ficticios
+  android/ ios/          ← app nativa (Capacitor) con el mismo código
 docs/       diagnóstico, arquitectura, métricas, CSV, actualización, sistema de diseño
 db/         esquema PostgreSQL/Supabase (opcional, para el futuro)
 ```
@@ -101,6 +102,16 @@ Después de cualquiera de las dos, la web muestra los datos nuevos al recargar.
 - La base se guarda en git como texto (`data/lnb.sql`); `data/lnb.sqlite` se reconstruye sola.
 
 Detalles en `docs/05-actualizacion.md`.
+
+## App para Android e iOS
+
+La misma plataforma como app nativa (Capacitor), con datos guardados para usar sin conexión.
+
+- **APK de prueba para Android:** https://luxemrose.github.io/lnb-stats/descargas/lnb-stats.apk
+- Compilar: `cd web && npm run android:apk` (Android) · `npm run ios:open` en una Mac (iOS).
+- `.github/workflows/mobile.yml` compila APK, AAB y la versión de iOS en cada cambio.
+
+Guía paso a paso (instalar, probar en iPhone, versiones, Google Play y App Store): `docs/07-app-movil.md`.
 
 ## Reglas de calidad
 

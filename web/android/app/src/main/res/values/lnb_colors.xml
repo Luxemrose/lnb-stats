@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Colores de la identidad de LNB Stats usados por la parte nativa (arranque y fondo de la ventana). -->
+<resources>
+    <color name="lnb_background">#10141D</color>
+    <color name="lnb_accent">#FF8A35</color>
+</resources>

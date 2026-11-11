@@ -5,7 +5,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { downloadText, toCsv } from "../lib/format";
-import { useCrest } from "./Crest";
+import { useCrest, useCrestSrc } from "./Crest";
 
 export type Icon = LucideIcon;
 
@@ -183,11 +183,10 @@ export function Avatar({ name, size = 40, tone = "neutral" }: { name: string; si
 
 /** Escudo oficial del equipo (si existe) o, como respaldo, un monograma con sus iniciales. */
 export function TeamMark({ name, size = 36, teamId }: { name: string; size?: number; teamId?: number | null }) {
-  const url = useCrest(teamId);
-  const [broken, setBroken] = useState(false);
-  if (url && !broken) {
-    return <img src={url} alt="" aria-hidden loading="lazy" decoding="async" className="shrink-0 object-contain"
-      style={{ width: size, height: size }} onError={() => setBroken(true)} />;
+  const [src, onError] = useCrestSrc(useCrest(teamId));
+  if (src) {
+    return <img src={src} alt="" aria-hidden loading="lazy" decoding="async" className="shrink-0 object-contain"
+      style={{ width: size, height: size }} onError={onError} />;
   }
   const clean = name.replace(/\(.*?\)/g, "").trim();
   const words = clean.split(/\s+/);

@@ -1,0 +1,77 @@
+# Compilación de la app móvil (Capacitor) para Android e iOS.
+# Corre en cada cambio de web/ y a mano (Actions -> "App móvil" -> Run workflow).
+# Resultados en la pestaña Actions -> la ejecución -> "Artifacts":
+#   - lnb-stats-android-debug   (APK instalable para pruebas)
+#   - lnb-stats-android-release (AAB para Google Play; firmado si están los secretos de abajo)
+#   - lnb-stats-ios-simulator   (compilación de iOS verificada en simulador, sin firmar)
+#
+# Firma del AAB (opcional, ver docs/07-app-movil.md). Secretos del repositorio:
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+name: App móvil
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/mobile.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21" }
+      - run: npm ci
+      - run: npm test
+      - run: npm run build && npx cap sync android
+      - name: SDK de Android
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+      - name: Firma (sólo si existen los secretos)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > android/upload.jks
+            printf 'storeFile=upload.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$STORE_PASS" "$KEY_ALIAS" "$KEY_PASS" > android/keystore.properties
+            echo "AAB firmado con la clave de subida"
+          else
+            echo "Sin secretos de firma: el AAB queda sin firmar"
+          fi
+      - name: Compilar APK y AAB
+        working-directory: web/android
+        run: ./gradlew assembleDebug bundleRelease -PlnbVersionCode=${{ github.run_number }} -PlnbVersionName=1.0.${{ github.run_number }}
+      - uses: actions/upload-artifact@v4
+        with: { name: lnb-stats-android-debug, path: web/android/app/build/outputs/apk/debug/*.apk }
+      - uses: actions/upload-artifact@v4
+        with: { name: lnb-stats-android-release, path: web/android/app/build/outputs/bundle/release/*.aab }
+
+  ios:
+    runs-on: macos-latest
+    defaults: { run: { working-directory: web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
+      - run: npm ci
+      - run: npm run build && npx cap sync ios
+      - name: Compilar para el simulador de iOS (sin firma)
+        working-directory: web/ios/App
+        run: |
+          xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - name: Empaquetar
+        working-directory: web/ios/App
+        run: cd build/Build/Products/Debug-iphonesimulator && zip -qr "$GITHUB_WORKSPACE/lnb-stats-ios-simulator.zip" App.app
+      - uses: actions/upload-artifact@v4
+        with: { name: lnb-stats-ios-simulator, path: lnb-stats-ios-simulator.zip }

@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { REMOTE_BASE, appDataMode, fetchWithTimeout, hideSplash, onConnectivityChange, readCache, writeCache } from "./native";
 import type { Dataset, Game, PlayerGameRow, Roster, Team, Player, TeamGameRow } from "./types";
 
 export type Mode = "real" | "demo";
@@ -28,6 +29,9 @@ interface Ctx {
   seasonId: number | null;
   setSeasonId: (id: number) => void;
   reload: () => void;
+  /** App: vuelve a consultar el sitio publicado. Devuelve si pudo. */
+  refresh: () => Promise<boolean>;
+  sync: SyncState;
 }
 
 const DataCtx = createContext<Ctx | null>(null);
@@ -71,6 +75,28 @@ function index(ds: Dataset, mode: Mode): Db {
   };
 }
 
+/** Estado de la actualización de datos (sólo relevante en la app, que trabaja también sin conexión). */
+export interface SyncState {
+  /** de dónde salen los datos que se ven ahora */
+  source: "remoto" | "copia-local" | "incluido" | null;
+  checking: boolean;
+  offline: boolean;
+  /** último intento exitoso de consultar el sitio publicado */
+  lastCheck: string | null;
+  error: string | null;
+}
+
+function newest(a: Dataset | null, b: Dataset | null): Dataset | null {
+  if (!a) return b;
+  if (!b) return a;
+  return (b.meta.generatedAt ?? "") > (a.meta.generatedAt ?? "") ? b : a;
+}
+
+function parseDataset(text: string | null): Dataset | null {
+  if (!text) return null;
+  try { const d = JSON.parse(text) as Dataset; return d && d.meta && Array.isArray(d.games) ? d : null; } catch { return null; }
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<Mode>(readMode);
   const [db, setDb] = useState<Db | null>(null);
@@ -78,31 +104,108 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [seasonId, setSeasonId] = useState<number | null>(null);
   const [nonce, setNonce] = useState(0);
+  const [sync, setSync] = useState<SyncState>({ source: null, checking: false, offline: false, lastCheck: null, error: null });
+  const current = useRef<Dataset | null>(null);
+  const seasonRef = useRef<number | null>(null);
+  seasonRef.current = seasonId;
+
+  const apply = useCallback((ds: Dataset, m: Mode) => {
+    current.current = ds;
+    setDb(index(ds, m));
+    // temporada: se conserva la elegida si sigue existiendo; si no, la más reciente con partidos
+    if (seasonRef.current === null || !ds.seasons.some((s) => s.id === seasonRef.current)) {
+      const withGames = ds.seasons.filter((s) => ds.games.some((g) => g.seasonId === s.id));
+      setSeasonId((withGames[0] ?? ds.seasons[0])?.id ?? null);
+    }
+  }, []);
+
+  /** Consulta el sitio publicado; si hay datos más nuevos, los muestra y los guarda para usar sin conexión. */
+  const refreshRemote = useCallback(async (): Promise<boolean> => {
+    setSync((s) => ({ ...s, checking: true }));
+    try {
+      const r = await fetchWithTimeout(`${REMOTE_BASE}data/real.json`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const text = await r.text();
+      const ds = parseDataset(text);
+      if (!ds) throw new Error("respuesta inválida");
+      // Se muestra sólo si es más nuevo que lo que ya se ve; la copia local se guarda siempre,
+      // así la próxima apertura sin conexión tiene los datos más recientes que se descargaron.
+      if (newest(current.current, ds) === ds && ds !== current.current) apply(ds, "real");
+      void writeCache("real.json", text);
+      setSync({ source: "remoto", checking: false, offline: false, lastCheck: new Date().toISOString(), error: null });
+      return true;
+    } catch (e) {
+      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+      setSync((s) => ({ ...s, checking: false, offline: true, error: offline ? "Sin conexión" : `No se pudo actualizar (${(e as Error).message})` }));
+      return false;
+    }
+  }, [apply]);
 
   useEffect(() => {
     let alive = true;
     setLoading(true); setError(null);
-    fetch(`./data/${mode}.json`, { cache: "no-cache" })
-      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() as Promise<Dataset>; })
-      .then((ds) => {
-        if (!alive) return;
-        const built = index(ds, mode);
-        setDb(built);
-        // temporada por defecto: la más reciente que tenga partidos
-        const withGames = ds.seasons.filter((s) => ds.games.some((g) => g.seasonId === s.id));
-        setSeasonId((withGames[0] ?? ds.seasons[0])?.id ?? null);
-      })
-      .catch((e) => alive && setError(`No pudimos cargar las estadísticas (${e.message}). Revisá tu conexión e intentá de nuevo.`))
-      .finally(() => alive && setLoading(false));
+    const finish = () => { if (alive) { setLoading(false); void hideSplash(); } };
+
+    if (mode === "demo" || !appDataMode) {
+      // Web (y demo): los datos se sirven junto con la página, como siempre.
+      fetch(`./data/${mode}.json`, { cache: "no-cache" })
+        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() as Promise<Dataset>; })
+        .then((ds) => { if (alive) { apply(ds, mode); setSync((s) => ({ ...s, source: "incluido" })); } })
+        .catch((e) => alive && setError(`No pudimos cargar las estadísticas (${e.message}). Revisá tu conexión e intentá de nuevo.`))
+        .finally(finish);
+      return () => { alive = false; };
+    }
+
+    // App: primero lo que ya está en el teléfono (copia guardada o datos incluidos), después el sitio.
+    (async () => {
+      const [cachedText, bundled] = await Promise.all([
+        readCache("real.json"),
+        fetch("./data/real.json").then((r) => (r.ok ? (r.json() as Promise<Dataset>) : null)).catch(() => null),
+      ]);
+      const cached = parseDataset(cachedText);
+      const initial = newest(cached, bundled);
+      if (!alive) return;
+      if (initial) {
+        apply(initial, "real");
+        setSync((s) => ({ ...s, source: initial === cached ? "copia-local" : "incluido" }));
+        finish();
+      }
+      const ok = await refreshRemote();
+      if (!alive) return;
+      if (!initial && !ok) setError("No hay conexión y todavía no hay datos guardados en el teléfono. Conectate a internet y tocá Reintentar.");
+      if (!initial) finish();
+    })();
     return () => { alive = false; };
-  }, [mode, nonce]);
+  }, [mode, nonce, apply, refreshRemote]);
+
+  // App: al volver la conexión, o al volver a la app después de un rato, se buscan datos nuevos.
+  useEffect(() => {
+    if (!appDataMode || mode === "demo") return;
+    const off = onConnectivityChange((online) => {
+      setSync((s) => ({ ...s, offline: !online }));
+      if (online) void refreshRemote();
+    });
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      const last = sync.lastCheck ? Date.parse(sync.lastCheck) : 0;
+      if (Date.now() - last > 20 * 60 * 1000) void refreshRemote();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { off(); document.removeEventListener("visibilitychange", onVisible); };
+  }, [mode, refreshRemote, sync.lastCheck]);
 
   const setMode = (m: Mode) => {
     try { localStorage.setItem("lnb-mode", m); } catch { /* sin almacenamiento: sólo para esta sesión */ }
     setModeState(m);
   };
 
-  return <DataCtx.Provider value={{ db, error, loading, mode, setMode, seasonId, setSeasonId, reload: () => setNonce((n) => n + 1) }}>{children}</DataCtx.Provider>;
+  return (
+    <DataCtx.Provider value={{
+      db, error, loading, mode, setMode, seasonId, setSeasonId, sync,
+      reload: () => setNonce((n) => n + 1),
+      refresh: () => (appDataMode && mode === "real" ? refreshRemote() : Promise.resolve(false)),
+    }}>{children}</DataCtx.Provider>
+  );
 }
 
 export function useData() {

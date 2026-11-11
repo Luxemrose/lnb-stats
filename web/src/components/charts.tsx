@@ -1,10 +1,11 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { Download, Image as ImageIcon } from "lucide-react";
 import { useData } from "../lib/data";
 import { downloadText, fdatetime, toCsv } from "../lib/format";
+import { saveFile } from "../lib/native";
 import { usePrefs } from "../lib/prefs";
 
 export interface ThemeColors {
@@ -42,7 +43,7 @@ async function exportPng(box: HTMLElement, title: string, subtitle: string, foot
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
   clone.setAttribute("width", String(width));
   clone.setAttribute("height", String(height));
-  clone.setAttribute("style", "font-family: Inter, system-ui, sans-serif; font-size: 12px");
+  clone.setAttribute("style", "font-family: 'Inter Variable', Inter, system-ui, sans-serif; font-size: 12px");
   const img = new Image();
   img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(clone));
   await img.decode();
@@ -54,25 +55,20 @@ async function exportPng(box: HTMLElement, title: string, subtitle: string, foot
   ctx.scale(scale, scale);
   ctx.fillStyle = c.surface; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = c.accent; ctx.fillRect(0, 0, W, 4);
-  ctx.fillStyle = c.ink; ctx.font = "700 21px Inter, system-ui, sans-serif"; ctx.fillText(title, padX, 40);
-  ctx.fillStyle = c.ink2; ctx.font = "13px Inter, system-ui, sans-serif"; ctx.fillText(subtitle, padX, 64);
+  ctx.fillStyle = c.ink; ctx.font = "700 21px 'Inter Variable', Inter, system-ui, sans-serif"; ctx.fillText(title, padX, 40);
+  ctx.fillStyle = c.ink2; ctx.font = "13px 'Inter Variable', Inter, system-ui, sans-serif"; ctx.fillText(subtitle, padX, 64);
   let x = padX;
   for (const l of legend.length > 1 ? legend : []) {
     ctx.fillStyle = l.color; ctx.beginPath(); ctx.arc(x + 5, top + 8, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = c.ink2; ctx.font = "13px Inter, system-ui, sans-serif"; ctx.fillText(l.name, x + 16, top + 12);
+    ctx.fillStyle = c.ink2; ctx.font = "13px 'Inter Variable', Inter, system-ui, sans-serif"; ctx.fillText(l.name, x + 16, top + 12);
     x += ctx.measureText(l.name).width + 40;
   }
   ctx.drawImage(img, padX, top + legendH, width, height);
-  ctx.fillStyle = c.muted; ctx.font = "11px Inter, system-ui, sans-serif";
+  ctx.fillStyle = c.muted; ctx.font = "11px 'Inter Variable', Inter, system-ui, sans-serif";
   ctx.fillText(footer, padX, H - 18);
-  ctx.fillStyle = c.accent; ctx.font = "700 12px Inter, system-ui, sans-serif";
+  ctx.fillStyle = c.accent; ctx.font = "700 12px 'Inter Variable', Inter, system-ui, sans-serif";
   ctx.fillText("LNB Stats", W - padX - ctx.measureText("LNB Stats").width, H - 18);
-  canvas.toBlob((b) => {
-    if (!b) return;
-    const url = URL.createObjectURL(b);
-    const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }, "image/png");
+  canvas.toBlob((b) => { if (b) void saveFile(filename, b); }, "image/png");
 }
 
 /** Tarjeta de gráfico: título, período y unidad visibles; exporta PNG (con título y fuente) y CSV. */
@@ -116,6 +112,40 @@ const tooltipStyle = (c: ThemeColors) => ({
 });
 
 type Row = Record<string, string | number | null>;
+
+/** Pantalla táctil: no hay "pasar el mouse", así que el detalle se abre tocando o deslizando el dedo. */
+const isTouch = typeof window !== "undefined" && !!window.matchMedia?.("(pointer: coarse)").matches;
+const Y_AXIS_W = 44, RIGHT_M = 12;
+
+/**
+ * Calcula qué punto (líneas) o qué grupo (barras) está bajo el dedo y lo deja seleccionado.
+ * Funciona igual en Android e iOS, sin depender de cómo cada navegador traduce el toque.
+ */
+function useTouchTooltip(n: number, kind: "point" | "band") {
+  const [idx, setIdx] = useState<number | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!isTouch || !el) return;
+    // Se escucha en fase de captura: Recharts detiene la propagación de los toques dentro del gráfico.
+    const onTouch = (e: globalThis.TouchEvent) => {
+      const t = e.touches[0] ?? e.changedTouches[0];
+      if (!t || !n) return;
+      const r = el.getBoundingClientRect();
+      const left = r.left + Y_AXIS_W, width = r.width - Y_AXIS_W - RIGHT_M;
+      const rel = Math.min(1, Math.max(0, (t.clientX - left) / width));
+      setIdx(kind === "point" ? Math.round(rel * (n - 1)) : Math.min(n - 1, Math.floor(rel * n)));
+    };
+    el.addEventListener("touchstart", onTouch, { capture: true, passive: true });
+    el.addEventListener("touchmove", onTouch, { capture: true, passive: true });
+    return () => { el.removeEventListener("touchstart", onTouch, true); el.removeEventListener("touchmove", onTouch, true); };
+  }, [n, kind]);
+  return {
+    ref, idx,
+    tip: isTouch ? (idx === null ? { active: false } : { active: true, defaultIndex: idx, key: idx }) : {},
+  };
+}
+
 const fmtNum = (v: number) => v.toLocaleString("es-AR", { maximumFractionDigits: 1 });
 
 /** Línea temporal con varias series (un solo eje). */
@@ -124,14 +154,16 @@ export function LinesChart({ data, x, series, colors, height = 280, unit, refX, 
   refX?: string; refLabel?: string; dashedKeys?: string[]; formatY?: (v: number) => string;
 }) {
   const c = useThemeColors();
+  const touch = useTouchTooltip(data.length, "point");
   return (
+    <div ref={touch.ref}>
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
         <CartesianGrid stroke={c.grid} vertical={false} />
         <XAxis dataKey={x} tick={{ fill: c.muted, fontSize: 11 }} stroke={c.axis} tickLine={false} minTickGap={18} />
         <YAxis tick={{ fill: c.muted, fontSize: 11 }} stroke={c.axis} tickLine={false} axisLine={false} width={44}
           tickFormatter={formatY} label={unit ? { value: unit, angle: -90, position: "insideLeft", fill: c.muted, fontSize: 11, dy: 30 } : undefined} />
-        <Tooltip {...tooltipStyle(c)} cursor={{ stroke: c.axis }} formatter={(v) => (typeof v === "number" ? (formatY ? formatY(v) : fmtNum(v)) : "s/d")} />
+        <Tooltip {...tooltipStyle(c)} {...touch.tip} cursor={{ stroke: c.axis }} formatter={(v) => (typeof v === "number" ? (formatY ? formatY(v) : fmtNum(v)) : "s/d")} />
         {series.length > 1 && <Legend itemSorter={null} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: c.ink2, paddingTop: 6 }} />}
         {refX && <ReferenceLine x={refX} stroke={c.ink2} strokeDasharray="4 4" label={{ value: refLabel, fill: c.ink2, fontSize: 11, position: "insideTopRight" }} />}
         {series.map((s, i) => (
@@ -142,6 +174,7 @@ export function LinesChart({ data, x, series, colors, height = 280, unit, refX, 
         ))}
       </LineChart>
     </ResponsiveContainer>
+    </div>
   );
 }
 
@@ -150,13 +183,15 @@ export function BarsChart({ data, x, series, colors, height = 280, formatY }: {
   data: Row[]; x: string; series: SeriesDef[]; colors: string[]; height?: number; formatY?: (v: number) => string;
 }) {
   const c = useThemeColors();
+  const touch = useTouchTooltip(data.length, "band");
   return (
+    <div ref={touch.ref}>
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 0 }} barGap={2} barCategoryGap="22%">
         <CartesianGrid stroke={c.grid} vertical={false} />
         <XAxis dataKey={x} tick={{ fill: c.muted, fontSize: 11 }} stroke={c.axis} tickLine={false} />
         <YAxis tick={{ fill: c.muted, fontSize: 11 }} stroke={c.axis} tickLine={false} axisLine={false} width={44} tickFormatter={formatY} />
-        <Tooltip {...tooltipStyle(c)} cursor={{ fill: c.grid, opacity: 0.6 }}
+        <Tooltip {...tooltipStyle(c)} {...touch.tip} cursor={{ fill: c.grid, opacity: 0.6 }}
           formatter={(v) => (typeof v === "number" ? (formatY ? formatY(v) : fmtNum(v)) : "s/d")} />
         {series.length > 1 && <Legend itemSorter={null} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: c.ink2, paddingTop: 6 }} />}
         {series.map((s, i) => (
@@ -164,5 +199,6 @@ export function BarsChart({ data, x, series, colors, height = 280, formatY }: {
         ))}
       </BarChart>
     </ResponsiveContainer>
+    </div>
   );
 }

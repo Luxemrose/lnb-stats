@@ -88,10 +88,37 @@
   --color-bad-soft: var(--bad-soft);
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 html, body { background: var(--bg); color: var(--ink); }
+
+/*
+ * Zonas seguras (muesca, barra de estado, barra de gestos) en Android e iPhone.
+ * iOS informa env(safe-area-inset-*); en Android, Capacitor además inyecta --safe-area-inset-*.
+ */
+:root {
+  --sat: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --sab: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+  --sal: max(env(safe-area-inset-left, 0px), var(--safe-area-inset-left, 0px));
+  --sar: max(env(safe-area-inset-right, 0px), var(--safe-area-inset-right, 0px));
+}
+html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+
+/* Pantallas táctiles: objetivos de toque cómodos y sin zoom automático del iPhone al escribir. */
+@media (pointer: coarse) {
+  .btn, .input { min-height: 42px; }
+  .btn-sm { min-height: 36px; }
+  .btn-icon { min-width: 42px; }
+  .chip { height: 36px; }
+  [role="radio"], [role="tab"] { min-height: 36px; }
+  .input, input, select, textarea { font-size: 16px !important; }
+}
+
+/* App nativa: comportamiento de app, no de página web. */
+.is-native body { overscroll-behavior-y: none; }
+.is-native nav, .is-native button, .is-native [role="tab"], .is-native [role="radio"] { -webkit-user-select: none; user-select: none; }
+.is-native a, .is-native img { -webkit-touch-callout: none; }
 body {
   font-family: var(--font-sans);
   font-feature-settings: "cv11", "ss01";
@@ -196,10 +223,31 @@ body {
   user-select: none;
 }
 .crest-card img { height: 135%; left: -10px; opacity: calc(var(--crest-opacity) * 0.9); }
-.crest-hero img { height: 170%; left: -24px; opacity: calc(var(--crest-opacity) * 0.55); }
+.crest-hero img { height: 170%; left: -24px; opacity: calc(var(--crest-opacity) * 0.42); }
 .crest-content { position: relative; z-index: 1; }
 /* Halo muy suave detrás del texto para que siga legible sobre el escudo más intenso. */
 .crest-content :where(a, span, div) { text-shadow: 0 0 6px var(--surface), 0 0 2px var(--surface); }
 
 .recharts-wrapper:focus, .recharts-surface:focus { outline: none; }
-.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pb-safe { padding-bottom: var(--sab); }
+.pt-safe { padding-top: var(--sat); }
+/* Márgenes laterales según el ancho de pantalla, sin quedar debajo de la muesca en horizontal. */
+.safe-x { padding-left: max(1rem, var(--sal)); padding-right: max(1rem, var(--sar)); }
+@media (min-width: 640px) { .safe-x { padding-left: max(1.5rem, var(--sal)); padding-right: max(1.5rem, var(--sar)); } }
+@media (min-width: 1024px) { .safe-x { padding-left: 2rem; padding-right: 2rem; } }
+/* Espacio inferior: en celular, lugar para la barra de navegación inferior y la barra de gestos. */
+.main-pb { padding-bottom: calc(7rem + var(--sab)); }
+@media (min-width: 1024px) { .main-pb { padding-bottom: 3rem; } }
+
+/* Teléfono en horizontal (poca altura): barras compactas para dejar lugar al contenido. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .topbar-row { height: 3rem; }
+  .mnav-item { height: 44px; }
+  .mnav-label { display: none; }
+  .main-pb { padding-bottom: calc(4rem + var(--sab)); }
+}
+
+/* Tablas en pantallas angostas: sombra en la columna fija para indicar que hay más a la derecha. */
+@media (max-width: 767px) {
+  td.sticky, th.sticky { box-shadow: 6px 0 8px -6px rgba(0, 0, 0, 0.45); }
+}

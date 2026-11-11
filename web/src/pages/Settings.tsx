@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { BookOpen, Database, ExternalLink, Keyboard, Monitor, Moon, PanelLeft, Palette, Sun } from "lucide-react";
+import { BookOpen, Database, Download, ExternalLink, Keyboard, Monitor, Moon, PanelLeft, Palette, Smartphone, Sun } from "lucide-react";
 import { Card, Notice, PageHeader, Segmented } from "../components/ui";
 import { useData } from "../lib/data";
 import { fdatetime } from "../lib/format";
+import { isNative, platform } from "../lib/native";
 import { usePrefs, type ThemePref } from "../lib/prefs";
 
 /** Preferencias del visitante (se guardan en su navegador). */
@@ -48,7 +49,23 @@ export default function Settings() {
           </div>
         </Card>
 
-        <Card icon={Keyboard} title="Atajos de teclado" className="lg:col-span-2">
+        {!isNative ? (
+          <Card icon={Smartphone} title="App para el celular" className="lg:col-span-2"
+            subtitle="La misma plataforma, como aplicación instalable. Funciona también sin conexión con los últimos datos descargados.">
+            <div className="flex flex-wrap items-center gap-3">
+              <a className="btn btn-primary" href="./descargas/lnb-stats.apk" download><Download size={15} /> Descargar para Android (APK de prueba)</a>
+              <span className="text-xs text-muted">
+                Al abrir el archivo, Android pide permitir la instalación desde el navegador. La versión de iPhone se distribuye por TestFlight / App Store.
+              </span>
+            </div>
+          </Card>
+        ) : (
+          <Card icon={Smartphone} title="Aplicación" className="lg:col-span-2">
+            <p className="text-sm text-ink-2">LNB Stats para {platform === "ios" ? "iPhone" : "Android"}. Los datos se actualizan solos cuando hay conexión; sin conexión se muestran los últimos guardados en el teléfono. Para buscar datos nuevos, deslizá hacia abajo desde el inicio de cualquier pantalla.</p>
+          </Card>
+        )}
+
+        <Card icon={Keyboard} title="Atajos de teclado" className="lg:col-span-2 hidden sm:block">
           <ul className="grid gap-2 text-sm sm:grid-cols-3">
             {[["Ctrl / ⌘ + K", "Abrir el buscador"], ["/", "Abrir el buscador"], ["↑ ↓ · Enter · Esc", "Moverse, abrir y cerrar en el buscador"]].map(([k, d]) => (
               <li key={k} className="flex items-center gap-3"><kbd className="rounded-md border border-line bg-surface-2 px-2 py-1 font-sans text-xs">{k}</kbd><span className="text-ink-2">{d}</span></li>

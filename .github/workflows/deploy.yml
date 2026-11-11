@@ -28,6 +28,19 @@ jobs:
         working-directory: web
       - run: npm run build
         working-directory: web
+      # APK de prueba descargable desde el sitio (descargas/lnb-stats.apk). Si falla, la web se publica igual.
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21" }
+        continue-on-error: true
+      - name: APK de prueba para Android
+        continue-on-error: true
+        working-directory: web
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+          npx cap sync android
+          (cd android && ./gradlew assembleDebug -PlnbVersionCode=${{ github.run_number }} -PlnbVersionName=1.0.${{ github.run_number }})
+          mkdir -p dist/descargas
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/descargas/lnb-stats.apk
       - uses: actions/upload-pages-artifact@v3
         with: { path: web/dist }
   deploy:
