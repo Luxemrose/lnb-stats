@@ -15,7 +15,7 @@ from .sources.laliganacional import (
     BASE, FixtureGame, LayoutChanged, PoliteFetcher, SourceBlocked, build_record, daterange_chunks, fixture_url,
     parse_boxscore, parse_fixture, parse_standings, season_code_for, season_range,
 )
-from .store import finish_sync, log_error, resolve_errors, save_game, save_standings, start_sync
+from .store import drop_rescheduled, finish_sync, log_error, resolve_errors, save_game, save_standings, start_sync
 from .validate import validate_game
 
 STANDINGS_PHASES_URL = f"{BASE}/api/clasificacion/{{fase}}/grupos"
@@ -101,7 +101,7 @@ def run_sync(conn, raw_dir: Path, season: str, max_games: int = 80, recheck_days
              today: date | None = None, standings: bool = True, crest_dir: Path | None = None) -> dict:
     today = today or datetime.now(timezone.utc).astimezone().date()
     sync_id = start_sync(conn, "laliganacional", f"temporada {season}")
-    counts = {"new": 0, "updated": 0, "unchanged": 0, "rejected": 0, "skipped": 0}
+    counts = {"new": 0, "updated": 0, "unchanged": 0, "rejected": 0, "skipped": 0, "dropped": 0}
     fetcher = PoliteFetcher(raw_dir)
     start, end = season_range(season)
     end = min(end, today + timedelta(days=14))  # próximos 14 días como "programados"
@@ -145,6 +145,14 @@ def run_sync(conn, raw_dir: Path, season: str, max_games: int = 80, recheck_days
                 counts["rejected"] += 1
                 continue
             _save(conn, rec, sync_id, counts, ref)
+        # Partidos reprogramados: la fecha vieja (sin jugar) ya no está en el fixture oficial.
+        if fixture:
+            keys = {build_record(fx, None, season, today).natural_key() for fx in fixture}
+            with conn:
+                gone = drop_rescheduled(conn, season, keys, start.isoformat(), end.isoformat())
+            counts["dropped"] = len(gone)
+            for k in gone:
+                print(f"  quitado (reprogramado o fuera del fixture, sin jugar): {k}")
         if pages >= max_games:
             print(f"Se alcanzó el límite de {max_games} fichas por ejecución; el resto se procesa en la próxima.")
         # La portada sólo publica la tabla de la temporada en curso: para temporadas pasadas no se pide.
@@ -168,6 +176,8 @@ def run_sync(conn, raw_dir: Path, season: str, max_games: int = 80, recheck_days
         print(f"Sincronización fallida: {e}")
         return {"sync_id": sync_id, "status": status, **counts}
     msg = f"{fetcher.requests} pedidos al sitio; omitidos (al día o por límite): {counts['skipped']}"
+    if counts["dropped"]:
+        msg += f"; quitados por reprogramación: {counts['dropped']}"
     status = finish_sync(conn, sync_id, counts, msg)
     print(f"Resultado ({status}): {counts} · {msg}")
     return {"sync_id": sync_id, "status": status, **counts}

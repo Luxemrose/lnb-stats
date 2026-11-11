@@ -9,7 +9,7 @@ import { Card, Notice, PageHeader, Segmented, StatTile } from "../components/ui"
 import { contextTeam } from "./Players";
 import { useSeason } from "../lib/data";
 import { playerSummaries, weeklyLeague, type PlayerSummary } from "../lib/derive";
-import { f1, fdatetime, pct } from "../lib/format";
+import { f1, fdate, fdatetime, pct } from "../lib/format";
 import { GLOSSARY } from "../lib/glossary";
 import { metricById, metricValue, ranking, type Metric } from "../lib/leaders";
 import { isCompleted, leaderMinGames, standings } from "../lib/stats";
@@ -43,7 +43,9 @@ export default function Dashboard() {
     <div className="space-y-6">
       <PageHeader eyebrow="Liga Nacional de Básquet" title={`Temporada ${season.code}`}
         subtitle={<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span>Datos al {fdatetime(meta.lastSuccessfulSync?.finished_at)}</span>
+          <span>Actualizado el {fdatetime(meta.lastSuccessfulSync?.finished_at)}</span>
+          <span className="text-muted">·</span>
+          <span>Último resultado cargado: {data.done.length ? fdate(data.done[0].date) : "ninguno"}</span>
           <span className="text-muted">·</span>
           <span>Fuente: {meta.sourceUrl ? <a className="link underline decoration-line-strong underline-offset-2" href={meta.sourceUrl} target="_blank" rel="noreferrer">sitio oficial de la Liga</a> : meta.sourceName}</span>
         </span>}

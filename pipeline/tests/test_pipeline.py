@@ -281,3 +281,22 @@ def test_remove_flat_background_keeps_crest_and_clears_corners():
     cx, cy = out.size[0] // 2, out.size[1] // 2
     assert out.getpixel((cx, cy))[3] > 240                   # centro: escudo opaco
     assert out.size[0] <= 70 and out.size[1] <= 70           # recortado al contorno
+
+
+def test_rescheduled_unplayed_games_are_dropped_but_results_kept(conn):
+    from lnbstats.store import drop_rescheduled
+    old = make_game(date="2026-11-09", home_score=None, away_score=None, status="scheduled", players=[])
+    new = make_game(date="2026-11-11", home_score=None, away_score=None, status="scheduled", players=[])
+    played = make_game(date="2026-11-05")
+    ingest_records(conn, [old, new, played], "csv", "t", verbose=False)
+    gone = drop_rescheduled(conn, "2026-27", {new.natural_key()}, "2026-11-01", "2026-11-20")
+    assert gone == [old.natural_key()]
+    keys = {r[0] for r in conn.execute("SELECT natural_key FROM games")}
+    assert keys == {new.natural_key(), played.natural_key()}   # el jugado no se toca aunque falte en el fixture
+
+
+def test_sync_and_cli_modules_import():
+    # La sincronización real no corre en las pruebas (usa la red): al menos debe cargar sin errores.
+    import importlib
+    for m in ("lnbstats.sync", "lnbstats.cli", "lnbstats.crests"):
+        importlib.import_module(m)

@@ -9,9 +9,11 @@
    últimos 4 días (por si la Liga corrige la planilla). Máximo 80 fichas por ejecución, 3 s entre pedidos.
 5. Valida y guarda. Si un partido ya guardado cambió, crea una revisión nueva y conserva la anterior
    (el token de la URL no cuenta como cambio: el sitio lo regenera en cada visita).
-6. Actualiza la tabla de posiciones oficial.
-7. Registra todo en `data_sync_logs` / `sync_errors` y regenera `web/public/data/real.json`.
-8. Ante 403 o 429 se detiene. Si la página cambió de estructura, registra el error y no guarda datos dudosos.
+6. Quita los partidos **sin jugar** que ya no figuran en el fixture (la Liga los reprogramó: la fecha
+   nueva entra como otro partido). Nunca toca partidos con resultado o estadísticas.
+7. Actualiza la tabla de posiciones oficial.
+8. Registra todo en `data_sync_logs` / `sync_errors` y regenera `web/public/data/real.json`.
+9. Ante 403 o 429 se detiene. Si la página cambió de estructura, registra el error y no guarda datos dudosos.
 
 Costo típico: primera carga ≈ 75 pedidos (≈ 4 min); actualización diaria ≈ 15 pedidos (< 1 min).
 
@@ -19,7 +21,9 @@ Costo típico: primera carga ≈ 75 pedidos (≈ 4 min); actualización diaria �
 
 ## Actualización automática (activa)
 
-`.github/workflows/sync.yml` corre **todos los días a las 07:17 (hora argentina)** en GitHub Actions:
+`.github/workflows/sync.yml` corre **cuatro veces por día: 02:17, 08:17, 14:17 y 20:17 (hora argentina)** en GitHub Actions.
+GitHub puede atrasar varias horas las tareas programadas (en noviembre de 2026 la corrida de las 07:17 se
+ejecutaba entre las 13:30 y las 17:50); con cuatro horarios, los resultados de la noche entran temprano.
 
 1. Corre las pruebas del pipeline (si fallan, no toca los datos).
 2. Reconstruye la base desde `data/lnb.sql` y ejecuta `sync` para la temporada en curso.

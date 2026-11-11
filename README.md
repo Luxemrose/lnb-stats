@@ -97,7 +97,7 @@ Después de cualquiera de las dos, la web muestra los datos nuevos al recargar.
 
 - **Web:** https://luxemrose.github.io/lnb-stats/ (GitHub Pages, se publica con `.github/workflows/deploy.yml`
   en cada cambio de `web/`). Requisito único: *Settings → Pages → Source: GitHub Actions*.
-- **Datos:** `.github/workflows/sync.yml` sincroniza todos los días a las 07:17 (hora argentina) y republica la web.
+- **Datos:** `.github/workflows/sync.yml` sincroniza cuatro veces por día (02:17, 08:17, 14:17 y 20:17, hora argentina) y republica la web.
 - La base se guarda en git como texto (`data/lnb.sql`); `data/lnb.sqlite` se reconstruye sola.
 
 Detalles en `docs/05-actualizacion.md`.

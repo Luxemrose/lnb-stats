@@ -275,3 +275,25 @@ def write_dump(conn, path: str | Path) -> Path:
     out = dump_path(path)
     out.write_text("\n".join(conn.iterdump()) + "\n", encoding="utf-8")
     return out
+
+
+def drop_rescheduled(conn, season_code: str, keep_keys: set[str], start: str, end: str) -> list[str]:
+    """Borra partidos SIN jugar que ya no figuran en el fixture oficial dentro del rango consultado.
+
+    Pasa cuando la Liga reprograma un partido: el fixture lo muestra con la fecha nueva (otra clave)
+    y la fecha vieja queda huérfana. Nunca toca partidos con resultado o con estadísticas.
+    """
+    season = conn.execute("SELECT id FROM seasons WHERE code=?", (season_code,)).fetchone()
+    if season is None:
+        return []
+    rows = conn.execute(
+        "SELECT g.id, g.natural_key FROM games g WHERE g.season_id=? AND g.date BETWEEN ? AND ?"
+        " AND g.home_score IS NULL AND g.away_score IS NULL AND g.detail_level='scheduled'"
+        " AND NOT EXISTS (SELECT 1 FROM player_game_stats p WHERE p.game_id=g.id)"
+        " AND NOT EXISTS (SELECT 1 FROM team_game_stats t WHERE t.game_id=g.id)",
+        (season["id"], start, end)).fetchall()
+    gone = [r for r in rows if r["natural_key"] not in keep_keys]
+    for r in gone:
+        conn.execute("DELETE FROM game_revisions WHERE game_id=?", (r["id"],))
+        conn.execute("DELETE FROM games WHERE id=?", (r["id"],))
+    return [r["natural_key"] for r in gone]

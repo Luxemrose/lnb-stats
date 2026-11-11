@@ -1,10 +1,12 @@
-# Actualización diaria de datos desde laliganacional.com.ar.
-# Corre todos los días a las 07:17 (hora argentina), después de los partidos de la noche.
+# Actualización de datos desde laliganacional.com.ar, cuatro veces por día.
+# GitHub puede demorar varias horas las tareas programadas cuando tiene mucha carga: con cuatro
+# horarios, los resultados de la noche entran a primera hora aunque alguna corrida se atrase.
+# Cada corrida hace ~15 pedidos al sitio (sólo partidos nuevos o recientes).
 # También se puede lanzar a mano: pestaña Actions -> "Sincronizar datos LNB" -> Run workflow.
 name: Sincronizar datos LNB
 on:
   schedule:
-    - cron: "17 10 * * *"   # 10:17 UTC = 07:17 Argentina
+    - cron: "17 5,11,17,23 * * *"   # 02:17, 08:17, 14:17 y 20:17 hora argentina
   workflow_dispatch:
 permissions:
   contents: write
