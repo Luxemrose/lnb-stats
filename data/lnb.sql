@@ -63,6 +63,7 @@ INSERT INTO "data_sync_logs" VALUES(48,'laliganacional','temporada 2026-27','202
 INSERT INTO "data_sync_logs" VALUES(49,'laliganacional','temporada 2026-27','2026-11-23T15:58:33+00:00','2026-11-23T15:59:16+00:00','success',0,0,12,0,'15 pedidos al sitio; omitidos (al día o por límite): 78');
 INSERT INTO "data_sync_logs" VALUES(50,'laliganacional','temporada 2026-27','2026-11-24T03:20:12+00:00','2026-11-24T03:20:46+00:00','success',2,0,9,0,'12 pedidos al sitio; omitidos (al día o por límite): 81');
 INSERT INTO "data_sync_logs" VALUES(51,'laliganacional','temporada 2026-27','2026-11-24T15:53:10+00:00','2026-11-24T15:53:43+00:00','success',0,0,11,0,'12 pedidos al sitio; omitidos (al día o por límite): 81');
+INSERT INTO "data_sync_logs" VALUES(52,'laliganacional','temporada 2026-27','2026-11-25T01:25:42+00:00','2026-11-25T01:26:16+00:00','success',0,0,11,0,'12 pedidos al sitio; omitidos (al día o por límite): 81');
 CREATE TABLE entity_aliases (
   entity_type   TEXT NOT NULL CHECK (entity_type IN ('team', 'player')),
   alias_key     TEXT NOT NULL,
@@ -623,18 +624,18 @@ INSERT INTO "games" VALUES(82,1,'2026-27|2026-11-17|obera|atenas-c','laliganacio
 INSERT INTO "games" VALUES(83,1,'2026-27|2026-11-17|regatas-c|quimsa','laliganacional','v2jqLkSYaCLeGUa17KFGQ7v5hfEufW2uTu_senW9RbBH4iexRmoq3i5g==','https://www.laliganacional.com.ar/laliga/partido/v2jqLkSYaCLeGUa17KFGQ7v5hfEufW2uTu_senW9RbBH4iexRmoq3i5g==/regatas-c-vs-quimsa','2026-11-17','21:00',NULL,NULL,'RAUL ARGENTO ORTIZ',10,11,79,83,'final','box_score','0716fa3184f25cc272078fdba5aa385821a6703677f0f7c26bd44e842b55a56e',3,'2026-11-02T20:24:15+00:00','2026-11-18T13:58:40+00:00','2026-11-21T22:11:45+00:00');
 INSERT INTO "games" VALUES(85,1,'2026-27|2026-11-19|obera|independiente-o','laliganacional','v2fuoe9kDGcgB4vhc2XhU_rUS3rN2i-xdQEpZ062Aw9fK8adcwafoGEg==','https://www.laliganacional.com.ar/laliga/partido/v2fuoe9kDGcgB4vhc2XhU_rUS3rN2i-xdQEpZ062Aw9fK8adcwafoGEg==/obera-vs-independiente-o','2026-11-19','21:30',NULL,NULL,'DR. LUIS AUGUSTO DERNA',15,17,96,89,'final','box_score','1290928a40c6343d7f442aaafa093186701f2275cadef30794c0382d050684df',3,'2026-11-04T18:00:43+00:00','2026-11-20T14:00:43+00:00','2026-11-23T15:58:52+00:00');
 INSERT INTO "games" VALUES(86,1,'2026-27|2026-11-19|olimpico-lb|ferro','laliganacional','v2SGcqVnrOGHNkP0H3_J2ZRuZO-RrLC0UimJdMErIkh3idQSNv8Ue86Q==','https://www.laliganacional.com.ar/laliga/partido/v2SGcqVnrOGHNkP0H3_J2ZRuZO-RrLC0UimJdMErIkh3idQSNv8Ue86Q==/olimpico-lb-vs-ferro','2026-11-19','22:05',NULL,NULL,'VICENTE ROSALES',8,5,80,84,'final','box_score','be0ffd0c4612e578c092e754fe1b70190ff70cabf0f94a9e308363e8fa85ac83',3,'2026-11-04T18:00:43+00:00','2026-11-20T14:00:47+00:00','2026-11-23T15:58:55+00:00');
-INSERT INTO "games" VALUES(87,1,'2026-27|2026-11-20|atenas-c|instituto','laliganacional','v2Kz0XAWOjb_FtzD7aGI1L9KjSLhLckPxlNU_cGe1HYpTFbn647Vth4A==','https://www.laliganacional.com.ar/laliga/partido/v2Kz0XAWOjb_FtzD7aGI1L9KjSLhLckPxlNU_cGe1HYpTFbn647Vth4A==/atenas-c-vs-instituto','2026-11-20','21:30',NULL,NULL,'ESTRUCTURAS PRETENSA ATENAS',13,7,80,88,'final','box_score','a70655e645a461db721612d3067156cb3a37e553f8ae82b36c960969d3410630',3,'2026-11-05T18:03:19+00:00','2026-11-21T03:58:45+00:00','2026-11-24T15:53:26+00:00');
+INSERT INTO "games" VALUES(87,1,'2026-27|2026-11-20|atenas-c|instituto','laliganacional','v2Kz0XAWOjb_FtzD7aGI1L9KjSLhLckPxlNU_cGe1HYpTFbn647Vth4A==','https://www.laliganacional.com.ar/laliga/partido/v2Kz0XAWOjb_FtzD7aGI1L9KjSLhLckPxlNU_cGe1HYpTFbn647Vth4A==/atenas-c-vs-instituto','2026-11-20','21:30',NULL,NULL,'ESTRUCTURAS PRETENSA ATENAS',13,7,80,88,'final','box_score','a70655e645a461db721612d3067156cb3a37e553f8ae82b36c960969d3410630',3,'2026-11-05T18:03:19+00:00','2026-11-21T03:58:45+00:00','2026-11-25T01:25:59+00:00');
 INSERT INTO "games" VALUES(88,1,'2026-27|2026-11-19|argentino-j|lanus','laliganacional','v2kWvFUEN9BS0eeuXSJnBiZpJDFqt5Bg3bPpmQ6rByU_gcxhfNLVB8-Q==','https://www.laliganacional.com.ar/laliga/partido/v2kWvFUEN9BS0eeuXSJnBiZpJDFqt5Bg3bPpmQ6rByU_gcxhfNLVB8-Q==/argentino-j-vs-lanus','2026-11-19','21:00',NULL,NULL,'EL FORTIN DE LAS MOROCHAS',4,1,86,69,'final','box_score','42b5c92556be6a319d84f55f00cccaad4befae53790d493b199b8e3a401a246c',2,'2026-11-06T17:32:16+00:00','2026-11-20T14:00:40+00:00','2026-11-23T15:58:49+00:00');
-INSERT INTO "games" VALUES(89,1,'2026-27|2026-11-21|quimsa|ferro','laliganacional','v2IZCvrDKQNVvzQh6rhx204fEjPSs0JLWYVhoNMnZfZqr42HRd77o-RA==','https://www.laliganacional.com.ar/laliga/partido/v2IZCvrDKQNVvzQh6rhx204fEjPSs0JLWYVhoNMnZfZqr42HRd77o-RA==/quimsa-vs-ferro','2026-11-21','11:30',NULL,NULL,'CIUDAD',11,5,87,74,'final','box_score','a1ce02440e7f6db17468ac4cf1ef022668bfa11fde36b666d2ac56dfa8c993dd',4,'2026-11-06T17:32:16+00:00','2026-11-22T03:11:08+00:00','2026-11-24T15:53:29+00:00');
-INSERT INTO "games" VALUES(90,1,'2026-27|2026-11-22|gimnasia-cr|boca','laliganacional','v2DQn8F70iaUiwazeIhFAoxQ36txx5QWZZ-sLRH0UvJRWumH9IUthRPA==','https://www.laliganacional.com.ar/laliga/partido/v2DQn8F70iaUiwazeIhFAoxQ36txx5QWZZ-sLRH0UvJRWumH9IUthRPA==/gimnasia-cr-vs-boca','2026-11-22','20:00',NULL,NULL,'SOCIOS FUNDADORES',2,14,83,66,'final','box_score','b346ac58cab03555737f210f2d4fed5bbb0dabc98a1e03d7a6966044e5c31a16',3,'2026-11-07T16:29:09+00:00','2026-11-23T03:44:39+00:00','2026-11-24T15:53:35+00:00');
-INSERT INTO "games" VALUES(91,1,'2026-27|2026-11-21|la-union-fsa|independiente-o','laliganacional','v2kI4h20Bv9Plc9I5rKXMrb3dFE9M2RBOC1vpZaZrM2ew9Y_qrlnaFYA==','https://www.laliganacional.com.ar/laliga/partido/v2kI4h20Bv9Plc9I5rKXMrb3dFE9M2RBOC1vpZaZrM2ew9Y_qrlnaFYA==/la-union-fsa-vs-independiente-o','2026-11-21','21:30',NULL,NULL,'CINCUENTENARIO',12,17,82,89,'final','box_score','12d103343a0e3ace0d4107f3124d2797c609202fb8ed016d6869b0f3852cb91d',3,'2026-11-11T23:28:43+00:00','2026-11-22T03:11:11+00:00','2026-11-24T15:53:32+00:00');
-INSERT INTO "games" VALUES(92,1,'2026-27|2026-12-03|ferro|racing-ch','laliganacional','v2uTOru7ZnFFJP3CvX4Ibim1rBbxAhfsuRxt3CZdsA-H9u6lr7uNwWNw==','https://www.laliganacional.com.ar/laliga/partido/v2uTOru7ZnFFJP3CvX4Ibim1rBbxAhfsuRxt3CZdsA-H9u6lr7uNwWNw==/ferro-vs-racing-ch','2026-12-03','20:00',NULL,NULL,'HECTOR ETCHART',5,16,NULL,NULL,'scheduled','scheduled','ed262f417d96b177a81f50c81f70101671a7662d0a9b1ebc94fe8ed8fd2143fc',1,'2026-11-19T14:27:05+00:00','2026-11-19T14:27:05+00:00','2026-11-24T15:53:35+00:00');
-INSERT INTO "games" VALUES(93,1,'2026-27|2026-12-04|olimpico-lb|san-lorenzo','laliganacional','v2wZyZOmPMoWZDWVN-ptPIA526NXM4XaYm0WKwlHlK3FRldz5C-mJotg==','https://www.laliganacional.com.ar/laliga/partido/v2wZyZOmPMoWZDWVN-ptPIA526NXM4XaYm0WKwlHlK3FRldz5C-mJotg==/olimpico-lb-vs-san-lorenzo','2026-12-04','00:00',NULL,NULL,'VICENTE ROSALES',8,18,NULL,NULL,'scheduled','scheduled','51391d24ef637b82e42c86ee82ce9a70b81a43c62b6ef6e6d3ceb4fcbfac820c',1,'2026-11-19T14:27:05+00:00','2026-11-19T14:27:05+00:00','2026-11-24T15:53:35+00:00');
-INSERT INTO "games" VALUES(94,1,'2026-27|2026-12-05|platense|racing-ch','laliganacional','v2Fw8aasBmyjzeja9RXBaZWPZpQPHbjTH4dP76Y8Lk_yHQBQqKA29zRA==','https://www.laliganacional.com.ar/laliga/partido/v2Fw8aasBmyjzeja9RXBaZWPZpQPHbjTH4dP76Y8Lk_yHQBQqKA29zRA==/platense-vs-racing-ch','2026-12-05','00:00',NULL,NULL,'CIUDAD DE VICENTE LOPEZ',9,16,NULL,NULL,'scheduled','scheduled','d519310a7b34859258732ae7f1e9b48db671ada9abc78180c449b760a966ddb8',1,'2026-11-20T14:00:47+00:00','2026-11-20T14:00:47+00:00','2026-11-24T15:53:35+00:00');
-INSERT INTO "games" VALUES(95,1,'2026-27|2026-12-06|quimsa|san-lorenzo','laliganacional','v2ekpJq4ms9B9tjgXOzjv037ycGsxocuMRpKZyQIMywoUjIK3WawXgvg==','https://www.laliganacional.com.ar/laliga/partido/v2ekpJq4ms9B9tjgXOzjv037ycGsxocuMRpKZyQIMywoUjIK3WawXgvg==/quimsa-vs-san-lorenzo','2026-12-06','00:00',NULL,NULL,'ESTADIO CIUDAD DE FRIAS',11,18,NULL,NULL,'scheduled','scheduled','99cf7f84ef278a0d0d919ea7046a7fe1d62d5515071a66f472cf60453b100efb',1,'2026-11-21T03:58:45+00:00','2026-11-21T03:58:45+00:00','2026-11-24T15:53:35+00:00');
-INSERT INTO "games" VALUES(96,1,'2026-27|2026-12-07|san-martin-c|atenas-c','laliganacional','v2CKqzbDU3PIeLp6nAgA0GlvJSexPOIe7wJ-7K1T2g4Vs-8oOD1cjYPA==','https://www.laliganacional.com.ar/laliga/partido/v2CKqzbDU3PIeLp6nAgA0GlvJSexPOIe7wJ-7K1T2g4Vs-8oOD1cjYPA==/san-martin-c-vs-atenas-c','2026-12-07','00:00',NULL,NULL,'RAUL ARGENTO ORTIZ',6,13,NULL,NULL,'scheduled','scheduled','db3a65bbafca12fdb197a38db1eafd7437bb23e060ea3c3b50d4314c0d8aab9c',1,'2026-11-22T03:11:11+00:00','2026-11-22T03:11:11+00:00','2026-11-24T15:53:35+00:00');
-INSERT INTO "games" VALUES(97,1,'2026-27|2026-12-09|regatas-c|atenas-c','laliganacional','v2cHsm7dT7pJMNw_AEqgd5q0wMh19_vRsRHegANSajiVG24DSbEL0F8g==','https://www.laliganacional.com.ar/laliga/partido/v2cHsm7dT7pJMNw_AEqgd5q0wMh19_vRsRHegANSajiVG24DSbEL0F8g==/regatas-c-vs-atenas-c','2026-12-09','00:00',NULL,NULL,'RAUL ARGENTO ORTIZ',10,13,NULL,NULL,'scheduled','scheduled','c421339f07d70ab5e43c2c14715c6962cf4d1a6e07b8a611310a8fae37bde92c',1,'2026-11-24T03:20:37+00:00','2026-11-24T03:20:37+00:00','2026-11-24T15:53:35+00:00');
-INSERT INTO "games" VALUES(98,1,'2026-27|2026-12-09|independiente-o|argentino-j','laliganacional','v2MnpzLggX1xl1zQkXomJcLU5mTb6rdctpuUOwIDvLVwqKBVO4ly-BPw==','https://www.laliganacional.com.ar/laliga/partido/v2MnpzLggX1xl1zQkXomJcLU5mTb6rdctpuUOwIDvLVwqKBVO4ly-BPw==/independiente-o-vs-argentino-j','2026-12-09','00:00',NULL,NULL,'EL GIGANTE DE LA RUTA 9',17,4,NULL,NULL,'scheduled','scheduled','5da0ff0e67e478175b2f7b062fdb679b1819701fb1fc71c7f2f8708323a1f297',1,'2026-11-24T03:20:37+00:00','2026-11-24T03:20:37+00:00','2026-11-24T15:53:35+00:00');
+INSERT INTO "games" VALUES(89,1,'2026-27|2026-11-21|quimsa|ferro','laliganacional','v2IZCvrDKQNVvzQh6rhx204fEjPSs0JLWYVhoNMnZfZqr42HRd77o-RA==','https://www.laliganacional.com.ar/laliga/partido/v2IZCvrDKQNVvzQh6rhx204fEjPSs0JLWYVhoNMnZfZqr42HRd77o-RA==/quimsa-vs-ferro','2026-11-21','11:30',NULL,NULL,'CIUDAD',11,5,87,74,'final','box_score','a1ce02440e7f6db17468ac4cf1ef022668bfa11fde36b666d2ac56dfa8c993dd',4,'2026-11-06T17:32:16+00:00','2026-11-22T03:11:08+00:00','2026-11-25T01:26:02+00:00');
+INSERT INTO "games" VALUES(90,1,'2026-27|2026-11-22|gimnasia-cr|boca','laliganacional','v2DQn8F70iaUiwazeIhFAoxQ36txx5QWZZ-sLRH0UvJRWumH9IUthRPA==','https://www.laliganacional.com.ar/laliga/partido/v2DQn8F70iaUiwazeIhFAoxQ36txx5QWZZ-sLRH0UvJRWumH9IUthRPA==/gimnasia-cr-vs-boca','2026-11-22','20:00',NULL,NULL,'SOCIOS FUNDADORES',2,14,83,66,'final','box_score','b346ac58cab03555737f210f2d4fed5bbb0dabc98a1e03d7a6966044e5c31a16',3,'2026-11-07T16:29:09+00:00','2026-11-23T03:44:39+00:00','2026-11-25T01:26:07+00:00');
+INSERT INTO "games" VALUES(91,1,'2026-27|2026-11-21|la-union-fsa|independiente-o','laliganacional','v2kI4h20Bv9Plc9I5rKXMrb3dFE9M2RBOC1vpZaZrM2ew9Y_qrlnaFYA==','https://www.laliganacional.com.ar/laliga/partido/v2kI4h20Bv9Plc9I5rKXMrb3dFE9M2RBOC1vpZaZrM2ew9Y_qrlnaFYA==/la-union-fsa-vs-independiente-o','2026-11-21','21:30',NULL,NULL,'CINCUENTENARIO',12,17,82,89,'final','box_score','12d103343a0e3ace0d4107f3124d2797c609202fb8ed016d6869b0f3852cb91d',3,'2026-11-11T23:28:43+00:00','2026-11-22T03:11:11+00:00','2026-11-25T01:26:04+00:00');
+INSERT INTO "games" VALUES(92,1,'2026-27|2026-12-03|ferro|racing-ch','laliganacional','v2uTOru7ZnFFJP3CvX4Ibim1rBbxAhfsuRxt3CZdsA-H9u6lr7uNwWNw==','https://www.laliganacional.com.ar/laliga/partido/v2uTOru7ZnFFJP3CvX4Ibim1rBbxAhfsuRxt3CZdsA-H9u6lr7uNwWNw==/ferro-vs-racing-ch','2026-12-03','20:00',NULL,NULL,'HECTOR ETCHART',5,16,NULL,NULL,'scheduled','scheduled','ed262f417d96b177a81f50c81f70101671a7662d0a9b1ebc94fe8ed8fd2143fc',1,'2026-11-19T14:27:05+00:00','2026-11-19T14:27:05+00:00','2026-11-25T01:26:07+00:00');
+INSERT INTO "games" VALUES(93,1,'2026-27|2026-12-04|olimpico-lb|san-lorenzo','laliganacional','v2wZyZOmPMoWZDWVN-ptPIA526NXM4XaYm0WKwlHlK3FRldz5C-mJotg==','https://www.laliganacional.com.ar/laliga/partido/v2wZyZOmPMoWZDWVN-ptPIA526NXM4XaYm0WKwlHlK3FRldz5C-mJotg==/olimpico-lb-vs-san-lorenzo','2026-12-04','00:00',NULL,NULL,'VICENTE ROSALES',8,18,NULL,NULL,'scheduled','scheduled','51391d24ef637b82e42c86ee82ce9a70b81a43c62b6ef6e6d3ceb4fcbfac820c',1,'2026-11-19T14:27:05+00:00','2026-11-19T14:27:05+00:00','2026-11-25T01:26:07+00:00');
+INSERT INTO "games" VALUES(94,1,'2026-27|2026-12-05|platense|racing-ch','laliganacional','v2Fw8aasBmyjzeja9RXBaZWPZpQPHbjTH4dP76Y8Lk_yHQBQqKA29zRA==','https://www.laliganacional.com.ar/laliga/partido/v2Fw8aasBmyjzeja9RXBaZWPZpQPHbjTH4dP76Y8Lk_yHQBQqKA29zRA==/platense-vs-racing-ch','2026-12-05','00:00',NULL,NULL,'CIUDAD DE VICENTE LOPEZ',9,16,NULL,NULL,'scheduled','scheduled','d519310a7b34859258732ae7f1e9b48db671ada9abc78180c449b760a966ddb8',1,'2026-11-20T14:00:47+00:00','2026-11-20T14:00:47+00:00','2026-11-25T01:26:07+00:00');
+INSERT INTO "games" VALUES(95,1,'2026-27|2026-12-06|quimsa|san-lorenzo','laliganacional','v2ekpJq4ms9B9tjgXOzjv037ycGsxocuMRpKZyQIMywoUjIK3WawXgvg==','https://www.laliganacional.com.ar/laliga/partido/v2ekpJq4ms9B9tjgXOzjv037ycGsxocuMRpKZyQIMywoUjIK3WawXgvg==/quimsa-vs-san-lorenzo','2026-12-06','00:00',NULL,NULL,'ESTADIO CIUDAD DE FRIAS',11,18,NULL,NULL,'scheduled','scheduled','99cf7f84ef278a0d0d919ea7046a7fe1d62d5515071a66f472cf60453b100efb',1,'2026-11-21T03:58:45+00:00','2026-11-21T03:58:45+00:00','2026-11-25T01:26:07+00:00');
+INSERT INTO "games" VALUES(96,1,'2026-27|2026-12-07|san-martin-c|atenas-c','laliganacional','v2CKqzbDU3PIeLp6nAgA0GlvJSexPOIe7wJ-7K1T2g4Vs-8oOD1cjYPA==','https://www.laliganacional.com.ar/laliga/partido/v2CKqzbDU3PIeLp6nAgA0GlvJSexPOIe7wJ-7K1T2g4Vs-8oOD1cjYPA==/san-martin-c-vs-atenas-c','2026-12-07','00:00',NULL,NULL,'RAUL ARGENTO ORTIZ',6,13,NULL,NULL,'scheduled','scheduled','db3a65bbafca12fdb197a38db1eafd7437bb23e060ea3c3b50d4314c0d8aab9c',1,'2026-11-22T03:11:11+00:00','2026-11-22T03:11:11+00:00','2026-11-25T01:26:07+00:00');
+INSERT INTO "games" VALUES(97,1,'2026-27|2026-12-09|regatas-c|atenas-c','laliganacional','v2cHsm7dT7pJMNw_AEqgd5q0wMh19_vRsRHegANSajiVG24DSbEL0F8g==','https://www.laliganacional.com.ar/laliga/partido/v2cHsm7dT7pJMNw_AEqgd5q0wMh19_vRsRHegANSajiVG24DSbEL0F8g==/regatas-c-vs-atenas-c','2026-12-09','00:00',NULL,NULL,'RAUL ARGENTO ORTIZ',10,13,NULL,NULL,'scheduled','scheduled','c421339f07d70ab5e43c2c14715c6962cf4d1a6e07b8a611310a8fae37bde92c',1,'2026-11-24T03:20:37+00:00','2026-11-24T03:20:37+00:00','2026-11-25T01:26:07+00:00');
+INSERT INTO "games" VALUES(98,1,'2026-27|2026-12-09|independiente-o|argentino-j','laliganacional','v2MnpzLggX1xl1zQkXomJcLU5mTb6rdctpuUOwIDvLVwqKBVO4ly-BPw==','https://www.laliganacional.com.ar/laliga/partido/v2MnpzLggX1xl1zQkXomJcLU5mTb6rdctpuUOwIDvLVwqKBVO4ly-BPw==/independiente-o-vs-argentino-j','2026-12-09','00:00',NULL,NULL,'EL GIGANTE DE LA RUTA 9',17,4,NULL,NULL,'scheduled','scheduled','5da0ff0e67e478175b2f7b062fdb679b1819701fb1fc71c7f2f8708323a1f297',1,'2026-11-24T03:20:37+00:00','2026-11-24T03:20:37+00:00','2026-11-25T01:26:07+00:00');
 CREATE TABLE official_standings (
   season_id     INTEGER NOT NULL REFERENCES seasons(id),
   phase         TEXT NOT NULL,
@@ -645,24 +646,24 @@ CREATE TABLE official_standings (
   captured_at   TEXT NOT NULL,
   PRIMARY KEY (season_id, phase, team_id)
 );
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',1,3,8,7,1,657,598,15,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',2,11,11,9,2,933,845,20,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',3,7,10,8,2,793,762,18,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',4,2,13,10,3,1009,954,23,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',5,14,9,5,4,782,749,14,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',6,15,9,5,4,735,743,14,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',7,4,9,5,4,709,705,14,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',8,13,10,5,5,812,796,15,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',9,17,6,3,3,576,534,9,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',10,8,9,4,5,774,767,13,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',11,16,10,4,6,784,811,14,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',12,12,8,3,5,627,657,11,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',13,9,8,3,5,615,629,11,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',14,1,13,4,9,999,1027,17,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',15,6,10,3,7,820,868,13,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',16,5,10,3,7,810,852,13,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',17,10,8,2,6,592,613,10,'2026-11-24T15:53:43+00:00');
-INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',18,18,9,2,7,631,748,11,'2026-11-24T15:53:43+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',1,3,8,7,1,657,598,15,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',2,11,11,9,2,933,845,20,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',3,7,10,8,2,793,762,18,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',4,2,13,10,3,1009,954,23,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',5,14,9,5,4,782,749,14,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',6,15,9,5,4,735,743,14,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',7,4,9,5,4,709,705,14,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',8,13,10,5,5,812,796,15,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',9,17,6,3,3,576,534,9,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',10,8,9,4,5,774,767,13,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',11,16,10,4,6,784,811,14,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',12,12,8,3,5,627,657,11,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',13,9,8,3,5,615,629,11,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',14,1,13,4,9,999,1027,17,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',15,6,10,3,7,820,868,13,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',16,5,10,3,7,810,852,13,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',17,10,8,2,6,592,613,10,'2026-11-25T01:26:16+00:00');
+INSERT INTO "official_standings" VALUES(1,'SERIE REGULAR',18,18,9,2,7,631,748,11,'2026-11-25T01:26:16+00:00');
 CREATE TABLE player_game_stats (
   game_id       INTEGER NOT NULL REFERENCES games(id),
   player_id     INTEGER NOT NULL REFERENCES players(id),
@@ -3462,24 +3463,24 @@ CREATE TABLE team_seasons (
   updated_at      TEXT NOT NULL,
   PRIMARY KEY (season_id, team_id)
 );
-INSERT INTO "team_seasons" VALUES(1,10,'114561','/escudos/1424/114561','1424-114561.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,6,'113546','/escudos/1426/113546','1426-113546.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,2,'112553','/escudos/1474/112553','1474-112553.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,13,'112793','/escudos/1498/112793','1498-112793.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,12,'114763','/escudos/1541/114763','1541-114763.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,7,'112809','/escudos/1790/112809','1790-112809.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,11,'112657','/escudos/1869/112657','1869-112657.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,8,'113870','/escudos/1882/113870','1882-113870.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,14,'114735','/escudos/19/114735','19-114735.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,4,'115240','/escudos/1932/115240','1932-115240.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,16,'114607','/escudos/1992/114607','1992-114607.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,17,'114628','/escudos/2025/114628','2025-114628.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,15,'113652','/escudos/2305/113652','2305-113652.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,3,'114902','/escudos/2376/114902','2376-114902.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,5,'112566','/escudos/46/112566','46-112566.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,1,'112600','/escudos/63/112600','63-112600.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,9,'112549','/escudos/80/112549','80-112549.webp',NULL,'2026-11-24T15:53:22+00:00');
-INSERT INTO "team_seasons" VALUES(1,18,'113373','/escudos/88/113373','88-113373.webp',NULL,'2026-11-24T15:53:22+00:00');
+INSERT INTO "team_seasons" VALUES(1,10,'114561','/escudos/1424/114561','1424-114561.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,6,'113546','/escudos/1426/113546','1426-113546.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,2,'112553','/escudos/1474/112553','1474-112553.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,13,'112793','/escudos/1498/112793','1498-112793.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,12,'114763','/escudos/1541/114763','1541-114763.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,7,'112809','/escudos/1790/112809','1790-112809.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,11,'112657','/escudos/1869/112657','1869-112657.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,8,'113870','/escudos/1882/113870','1882-113870.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,14,'114735','/escudos/19/114735','19-114735.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,4,'115240','/escudos/1932/115240','1932-115240.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,16,'114607','/escudos/1992/114607','1992-114607.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,17,'114628','/escudos/2025/114628','2025-114628.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,15,'113652','/escudos/2305/113652','2305-113652.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,3,'114902','/escudos/2376/114902','2376-114902.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,5,'112566','/escudos/46/112566','46-112566.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,1,'112600','/escudos/63/112600','63-112600.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,9,'112549','/escudos/80/112549','80-112549.webp',NULL,'2026-11-25T01:25:55+00:00');
+INSERT INTO "team_seasons" VALUES(1,18,'113373','/escudos/88/113373','88-113373.webp',NULL,'2026-11-25T01:25:55+00:00');
 CREATE TABLE teams (
   id            INTEGER PRIMARY KEY,
   name          TEXT NOT NULL,                 -- nombre tal como lo publica la fuente
